@@ -29,8 +29,12 @@ from f1predictor.config import (
     F1_DRIVERS_URL,
     F1_STANDINGS_URL,
     FASTF1_URL,
+    LLM_ANALYSIS_PATH,
+    MONTECARLO_RESULTS_PATH,
     OPENAI_WEB_SEARCH_URL,
     OPENF1_URL,
+    REPORT_PDF_PATH,
+    REPORT_TEX_PATH,
     TEAM_COLORS,
 )
 from f1predictor.data import (
@@ -52,6 +56,7 @@ from f1predictor.llm import (
 )
 from f1predictor.parameters import SimParams
 from f1predictor.public_apis import refresh_model_inputs_from_public_apis
+from f1predictor.report import persist_llm_analysis, persist_montecarlo_results, render_report
 from f1predictor.simulator import build_driver_diagnostics, describe_driver, simulate_many
 
 
@@ -865,7 +870,10 @@ def render_llm_view(
             )
             try:
                 with st.spinner("Consultando al LLM..."):
-                    st.session_state["llm_answer"] = call_llm_analysis(model, payload).strip()
+                    answer = call_llm_analysis(model, payload).strip()
+                    persist_llm_analysis(answer)
+                    st.session_state["llm_answer"] = answer
+                    st.session_state["llm_analysis_path"] = str(LLM_ANALYSIS_PATH)
             except Exception as exc:
                 st.error(f"No se pudo generar analisis: {exc}")
 
@@ -873,6 +881,32 @@ def render_llm_view(
         answer = st.session_state["llm_answer"]
         render_copy_button(answer, "analysis")
         st.markdown(answer)
+
+    report_ready = (
+        driver_results is not None
+        and constructor_results is not None
+        and race_winners is not None
+        and bool(st.session_state.get("llm_answer"))
+    )
+    st.divider()
+    if st.button("Guardar reporte", disabled=not report_ready):
+        try:
+            with st.spinner("Generando graficos, renderizando LaTeX y compilando PDF..."):
+                pdf_path = render_report(
+                    driver_results,
+                    constructor_results,
+                    race_winners,
+                    drivers,
+                    calendar,
+                    params,
+                    st.session_state.get("llm_answer", ""),
+                )
+            st.success(f"Reporte guardado: {pdf_path.name}")
+            st.caption(f"Markdown: {LLM_ANALYSIS_PATH} | TeX: {REPORT_TEX_PATH} | PDF: {REPORT_PDF_PATH}")
+        except Exception as exc:
+            st.error(f"No se pudo guardar el reporte: {exc}")
+    elif not report_ready:
+        st.caption("El reporte se habilita despues de correr la simulacion y generar el analisis LLM.")
 
 
 def render_app() -> None:
@@ -893,16 +927,21 @@ def render_app() -> None:
 
     if st.button("Simular campeonato", type="primary"):
         try:
-            st.session_state["simulation_results"] = run_simulation_cached(
+            simulation_results = run_simulation_cached(
                 dataframe_to_csv_text(drivers),
                 dataframe_to_csv_text(calendar),
                 params,
             )
+            persist_montecarlo_results(*simulation_results, drivers, calendar, params)
+            st.session_state["simulation_results"] = simulation_results
             st.session_state["simulation_drivers"] = drivers.copy()
             st.session_state["simulation_calendar"] = calendar.copy()
             st.session_state["simulation_params"] = params
             st.session_state.pop("scenario_results", None)
             st.session_state.pop("scenario_key", None)
+            st.session_state.pop("llm_answer", None)
+            st.session_state.pop("llm_analysis_path", None)
+            st.success(f"Resultados Monte Carlo guardados en {MONTECARLO_RESULTS_PATH}.")
         except Exception as exc:
             st.error(f"No se pudo correr la simulacion: {exc}")
 

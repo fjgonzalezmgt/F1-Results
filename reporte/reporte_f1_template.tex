@@ -1,0 +1,56 @@
+\documentclass[11pt,letterpaper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[spanish]{babel}
+\usepackage{geometry}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{xcolor}
+\usepackage{hyperref}
+
+\geometry{margin=1in}
+\hypersetup{colorlinks=true,linkcolor=black,urlcolor=blue}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0.55em}
+
+\title{\textbf{__REPORT_TITLE__}}
+\author{F1 Championship Lab}
+\date{Generado: __GENERATED_AT__}
+
+\begin{document}
+\maketitle
+
+\section*{Resumen ejecutivo}
+\textbf{Proximo GP analizado:} __NEXT_GP__
+
+__SIMULATION_SUMMARY__
+
+\section*{Campeonato de pilotos}
+__DRIVER_CHART__
+
+__DRIVER_TABLE__
+
+\section*{Campeonato de constructores}
+__CONSTRUCTOR_CHART__
+
+__CONSTRUCTOR_TABLE__
+
+\section*{Proximo Gran Premio}
+__NEXT_RACE_CHART__
+
+__NEXT_RACE_TABLE__
+
+\section*{Parametros de simulacion}
+__PARAMETER_TABLE__
+
+\section*{Notas de datos}
+__DATA_NOTES__
+
+\newpage
+\section*{Analisis LLM}
+__LLM_ANALYSIS__
+
+\end{document}

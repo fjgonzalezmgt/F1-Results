@@ -13,6 +13,12 @@ data/cache/
 env/
 venv/
 resultados/
+figs/*.png
+reporte/reporte_f1.aux
+reporte/reporte_f1.log
+reporte/reporte_f1.out
+reporte/reporte_f1.pdf
+reporte/reporte_f1.tex
 dist/
 build/
 *.egg-info/

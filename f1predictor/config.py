@@ -15,8 +15,16 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 DATA_DIR = PROJECT_ROOT / "data"
 CACHE_DIR = DATA_DIR / "cache"
+RESULTS_DIR = PROJECT_ROOT / "resultados"
+REPORT_DIR = PROJECT_ROOT / "reporte"
+FIGS_DIR = PROJECT_ROOT / "figs"
 DRIVERS_PATH = DATA_DIR / "drivers_seed.csv"
 CALENDAR_PATH = DATA_DIR / "calendar_seed.csv"
+LLM_ANALYSIS_PATH = RESULTS_DIR / "analisis_llm.md"
+MONTECARLO_RESULTS_PATH = RESULTS_DIR / "resultados_montecarlo.xlsx"
+REPORT_TEMPLATE_PATH = REPORT_DIR / "reporte_f1_template.tex"
+REPORT_TEX_PATH = REPORT_DIR / "reporte_f1.tex"
+REPORT_PDF_PATH = REPORT_DIR / "reporte_f1.pdf"
 
 APP_TITLE = "F1 Championship Lab"
 
