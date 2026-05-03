@@ -38,7 +38,7 @@ Aplicacion Streamlit para simular el campeonato de Formula 1 2026 combinando un 
 | **Modelo piloto/constructor** | Combina 13 ratings por piloto (habilidad, clasificacion, ritmo, consistencia, neumaticos, lluvia, racecraft…) con 5 atributos de equipo (ritmo, chasis, motor, estrategia, fiabilidad). |
 | **Circuitos** | Cada GP modifica el modelo segun carga aerodinamica, potencia, degradacion, dificultad de adelantamiento, riesgo de clima y safety car, e importancia de clasificacion. |
 | **Sprints** | Suma puntos de los sprints pendientes de forma configurable desde la barra lateral. |
-| **APIs publicas** | El boton *Actualizar info* consulta Jolpica/Ergast y OpenF1, recalibra ratings con resultados reales y guarda CSV en disco. |
+| **APIs publicas** | El boton *Actualizar info* consulta Jolpica/Ergast y OpenF1, usa temporadas historicas como prior, recalibra ratings con resultados reales y guarda CSV en disco. |
 | **Formula1.com via LLM** | El boton *Actualizar F1.com con LLM* usa `web_search` de OpenAI restringido a Formula1.com para line-up, standings y calendario oficial. |
 | **LLM de contexto** | Busca noticias del proximo GP (clima, parrilla, upgrades, sanciones) y genera un veredicto narrativo sobre pilotos, constructores y escenarios. |
 | **Datos editables y persistentes** | Pilotos y calendario viven en CSV editables desde la app; cualquier actualizacion los sobreescribe en disco. |
@@ -208,7 +208,8 @@ flowchart TD
 |---|---|---|---|
 | `driver_weight` | 0.10 – 0.80 | **0.42** | Peso de habilidad del piloto en la fuerza base |
 | `constructor_weight` | 0.10 – 0.80 | **0.48** | Peso del equipo (chasis + motor + estrategia) |
-| `form_weight` | 0.00 – 0.30 | **0.10** | Peso de la forma reciente |
+| `form_weight` | 0.00 – 0.30 | **0.06** | Peso inicial de la forma reciente |
+| `form_decay_races` | 0.5 – 8.0 | **2.5** | Duracion de la forma reciente antes de diluirse |
 | `qualifying_weight` | 0.20 – 1.20 | **0.72** | Cuanto arrastra la posicion de parrilla al ritmo de carrera |
 
 ### Incertidumbre
@@ -220,6 +221,7 @@ flowchart TD
 | `weather_multiplier` | 0.3 – 2.5 | **1.0** | Escala la probabilidad de sesion mojada |
 | `safety_car_multiplier` | 0.3 – 2.5 | **1.0** | Escala la probabilidad de safety car |
 | `development_drift` | 0.0 – 8.0 | **2.4** | Deriva de desarrollo de equipo a lo largo de la temporada |
+| `team_uncertainty` | 0.0 – 10.0 | **6.0** | Incertidumbre persistente del paquete de cada equipo |
 
 ### Ratings de piloto (1 – 100)
 

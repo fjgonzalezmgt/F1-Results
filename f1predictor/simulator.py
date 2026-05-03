@@ -56,7 +56,60 @@ def _event_fit(row: pd.Series, race: pd.Series) -> float:
     return float(downforce_fit + power_fit + tyre_fit + street_fit + strategy_fit)
 
 
-def _base_strength(row: pd.Series, params: SimParams) -> float:
+def _combine_strength(
+    driver_component: float | np.ndarray,
+    constructor_component: float | np.ndarray,
+    recent_form: float | np.ndarray,
+    params: SimParams,
+    form_scale: float = 1.0,
+) -> float | np.ndarray:
+    """Blend driver, constructor and decayed-form components."""
+    effective_form_weight = max(0.0, params.form_weight) * max(0.0, float(form_scale))
+    total = max(0.01, params.driver_weight + params.constructor_weight + effective_form_weight)
+    return (
+        params.driver_weight * driver_component
+        + params.constructor_weight * constructor_component
+        + effective_form_weight * recent_form
+    ) / total
+
+
+def _form_scale_for_race(race_index: int, params: SimParams) -> float:
+    """Return the recent-form multiplier for a future race index."""
+    decay = max(0.05, float(params.form_decay_races))
+    return float(np.exp(-max(0, race_index) / decay))
+
+
+def _package_uncertainty_scale(calendar: pd.DataFrame, params: SimParams) -> float:
+    """Scale team-package uncertainty down as completed evidence accumulates."""
+    completed_before_start = calendar.loc[
+        (calendar["completed"] == 1) & (calendar["round"] < params.start_round),
+        "round",
+    ].nunique()
+    return float(params.team_uncertainty / np.sqrt(completed_before_start + 1.0))
+
+
+def _season_evidence_confidence(calendar: pd.DataFrame, params: SimParams, prior_rounds: float = 8.0) -> float:
+    """Return how much to trust current-season derived ratings."""
+    completed_before_start = calendar.loc[
+        (calendar["completed"] == 1) & (calendar["round"] < params.start_round),
+        "round",
+    ].nunique()
+    return float(completed_before_start / (completed_before_start + prior_rounds))
+
+
+def _regress_to_mean(
+    values: float | np.ndarray,
+    center: float,
+    confidence: float,
+    floor_factor: float,
+) -> float | np.ndarray:
+    """Shrink values toward a center when current-season evidence is thin."""
+    confidence = max(0.0, min(1.0, float(confidence)))
+    factor = max(0.0, min(1.0, float(floor_factor) + (1.0 - float(floor_factor)) * confidence))
+    return center + (values - center) * factor
+
+
+def _base_strength(row: pd.Series, params: SimParams, form_scale: float = 1.0) -> float:
     """Blend driver, constructor and form ratings into a single latent strength.
 
     Parameters
@@ -73,15 +126,7 @@ def _base_strength(row: pd.Series, params: SimParams) -> float:
     """
     driver = 0.38 * row["driver_rating"] + 0.34 * row["race_pace"] + 0.16 * row["racecraft"] + 0.12 * row["consistency"]
     constructor = 0.38 * row["team_pace"] + 0.22 * row["chassis"] + 0.18 * row["power_unit"] + 0.12 * row["strategy"] + 0.10 * row["reliability"]
-    total = max(0.01, params.driver_weight + params.constructor_weight + params.form_weight)
-    return float(
-        (
-            params.driver_weight * driver
-            + params.constructor_weight * constructor
-            + params.form_weight * row["recent_form"]
-        )
-        / total
-    )
+    return float(_combine_strength(driver, constructor, row["recent_form"], params, form_scale=form_scale))
 
 
 def _dnf_probability(row: pd.Series, race: pd.Series, params: SimParams, sprint: bool) -> float:
@@ -116,6 +161,7 @@ def _simulate_qualifying(
     rng: np.random.Generator,
     params: SimParams,
     team_trend: dict[str, float] | None = None,
+    form_scale: float = 1.0,
 ) -> pd.DataFrame:
     """Simulate a qualifying order for a race or sprint event.
 
@@ -147,7 +193,7 @@ def _simulate_qualifying(
             + 0.22 * row["team_pace"]
             + 0.16 * row["chassis"]
             + 0.10 * row["power_unit"]
-            + 0.10 * row["recent_form"]
+            + 0.10 * form_scale * row["recent_form"]
             + 1.6 * _event_fit(row, race)
             + trend
         )
@@ -168,6 +214,7 @@ def simulate_event(
     params: SimParams,
     sprint: bool = False,
     team_trend: dict[str, float] | None = None,
+    form_scale: float = 1.0,
 ) -> pd.DataFrame:
     """Simulate one race or sprint and return the finishing order.
 
@@ -198,7 +245,7 @@ def simulate_event(
         ``points``, ``wet_race`` and ``safety_car``.
     """
     clean = clean_drivers(drivers)
-    qualifying = _simulate_qualifying(clean, race, rng, params, team_trend=team_trend)
+    qualifying = _simulate_qualifying(clean, race, rng, params, team_trend=team_trend, form_scale=form_scale)
     field = clean.merge(qualifying[["code", "grid_position"]], on="code", how="left")
     n = len(field)
     wet_race = rng.random() < race["weather_risk"] / 100.0 * params.weather_multiplier
@@ -211,7 +258,7 @@ def simulate_event(
         quali_lock = params.qualifying_weight * race["qualifying_importance"] / 100.0
         overtake_release = (100.0 - race["overtake_difficulty"]) / 100.0
         grid_bonus = grid_edge * (0.28 + 0.72 * quali_lock) * (1.15 - 0.55 * overtake_release)
-        score = _base_strength(row, params) + 2.2 * _event_fit(row, race) + grid_bonus + trend
+        score = _base_strength(row, params, form_scale=form_scale) + 2.2 * _event_fit(row, race) + grid_bonus + trend
         score += 0.08 * row["tyre_management"] * race["tyre_stress"] / 100.0
         if wet_race:
             score += (row["wet_skill"] - 75.0) * 0.18
@@ -341,19 +388,28 @@ def simulate_many(
 
     driver_component = 0.38 * driver_rating + 0.34 * race_pace + 0.16 * racecraft + 0.12 * consistency
     constructor_component = 0.38 * team_pace + 0.22 * chassis + 0.18 * power_unit + 0.12 * strategy + 0.10 * reliability
-    total_weight = max(0.01, params.driver_weight + params.constructor_weight + params.form_weight)
-    base_strength = (
-        params.driver_weight * driver_component
-        + params.constructor_weight * constructor_component
-        + params.form_weight * recent_form
-    ) / total_weight
-    qualifying_base = (
+    evidence_confidence = _season_evidence_confidence(clean_cal, params)
+    driver_component = _regress_to_mean(driver_component, float(np.mean(driver_component)), evidence_confidence, 0.82)
+    constructor_component = _regress_to_mean(
+        constructor_component,
+        float(np.mean(constructor_component)),
+        evidence_confidence,
+        0.68,
+    )
+    recent_form = _regress_to_mean(recent_form, 75.0, evidence_confidence, 0.45)
+    qualifying_base_no_form = (
         0.42 * qualifying
         + 0.22 * team_pace
         + 0.16 * chassis
         + 0.10 * power_unit
-        + 0.10 * recent_form
     )
+    qualifying_base_no_form = _regress_to_mean(
+        qualifying_base_no_form,
+        float(np.mean(qualifying_base_no_form)),
+        evidence_confidence,
+        0.78,
+    )
+    package_uncertainty_scale = _package_uncertainty_scale(clean_cal, params)
     q_noise_scale = params.chaos * (0.78 + (100.0 - consistency) / 260.0)
     race_noise_scale = params.chaos * (1.0 + (100.0 - consistency) / 180.0)
 
@@ -387,10 +443,15 @@ def simulate_many(
         strategy_fit = ((strategy - 50.0) / 10.0) * (race["safety_car_risk"] - 50.0) / 48.0
         return downforce_fit + power_fit + tyre_fit + street_fit + strategy_fit
 
-    def run_session(race: pd.Series, sprint: bool, trend_by_driver: np.ndarray) -> tuple[np.ndarray, int]:
+    def run_session(
+        race: pd.Series,
+        sprint: bool,
+        team_adjustment_by_driver: np.ndarray,
+        form_scale: float,
+    ) -> tuple[np.ndarray, int]:
         fit = event_fit_vector(race)
         weather_qualifying = rng.random() < race["weather_risk"] / 100.0 * params.weather_multiplier
-        qualifying_score = qualifying_base + 1.6 * fit + trend_by_driver
+        qualifying_score = qualifying_base_no_form + 0.10 * form_scale * recent_form + 1.6 * fit + team_adjustment_by_driver
         if weather_qualifying:
             qualifying_score = qualifying_score + (wet_skill - driver_rating) * 0.25
         qualifying_score = qualifying_score + rng.normal(0.0, q_noise_scale, size=n_drivers)
@@ -404,7 +465,14 @@ def simulate_many(
         quali_lock = params.qualifying_weight * race["qualifying_importance"] / 100.0
         overtake_release = (100.0 - race["overtake_difficulty"]) / 100.0
         grid_bonus = grid_edge * (0.28 + 0.72 * quali_lock) * (1.15 - 0.55 * overtake_release)
-        score = base_strength + 2.2 * fit + grid_bonus + trend_by_driver
+        base_strength = _combine_strength(
+            driver_component,
+            constructor_component,
+            recent_form,
+            params,
+            form_scale=form_scale,
+        )
+        score = base_strength + 2.2 * fit + grid_bonus + team_adjustment_by_driver
         score = score + 0.08 * tyre_management * race["tyre_stress"] / 100.0
         if wet_race:
             score = score + (wet_skill - 75.0) * 0.18
@@ -432,17 +500,29 @@ def simulate_many(
         points = current_points.copy()
         team_points = base_team_points.copy()
         season_trend = rng.normal(0.0, params.development_drift, size=n_teams)
+        package_uncertainty = rng.normal(0.0, package_uncertainty_scale, size=n_teams)
 
         for race_index, (_, race) in enumerate(remaining.iterrows()):
             progress = 0.0 if len(remaining) <= 1 else race_index / (len(remaining) - 1)
-            trend_by_driver = season_trend[team_idx] * progress
+            team_adjustment_by_driver = package_uncertainty[team_idx] + season_trend[team_idx] * progress
+            form_scale = _form_scale_for_race(race_index, params)
 
             if params.include_sprints and int(race["sprint_remaining"]) == 1:
-                sprint_points, _winner_idx = run_session(race, sprint=True, trend_by_driver=trend_by_driver)
+                sprint_points, _winner_idx = run_session(
+                    race,
+                    sprint=True,
+                    team_adjustment_by_driver=team_adjustment_by_driver,
+                    form_scale=form_scale,
+                )
                 points += sprint_points
                 np.add.at(team_points, team_idx, sprint_points)
 
-            race_points, winner_idx = run_session(race, sprint=False, trend_by_driver=trend_by_driver)
+            race_points, winner_idx = run_session(
+                race,
+                sprint=False,
+                team_adjustment_by_driver=team_adjustment_by_driver,
+                form_scale=form_scale,
+            )
             points += race_points
             np.add.at(team_points, team_idx, race_points)
             race_winner_counts[race_index, winner_idx] += 1
@@ -517,6 +597,108 @@ def simulate_many(
     )
     race_df = pd.DataFrame(race_rows).sort_values(["round", "win_pct"], ascending=[True, False])
     return driver_df, constructor_df, race_df
+
+
+def build_driver_diagnostics(
+    driver_results: pd.DataFrame,
+    drivers: pd.DataFrame,
+    calendar: pd.DataFrame,
+    params: SimParams,
+    limit: int = 12,
+) -> pd.DataFrame:
+    """Build an explainability table for the main championship result.
+
+    The table is intentionally approximate: it decomposes the deterministic
+    inputs that shape the Monte Carlo instead of trying to replay every random
+    draw.  It is useful for spotting overconfident seeds, dominant team ratings
+    and circuits that flatter one package.
+    """
+    clean_dr = clean_drivers(drivers)
+    clean_cal = clean_calendar(calendar)
+    remaining = clean_cal.loc[(clean_cal["completed"] == 0) & (clean_cal["round"] >= params.start_round)].copy()
+    package_sd = _package_uncertainty_scale(clean_cal, params)
+    evidence_confidence = _season_evidence_confidence(clean_cal, params)
+
+    raw_driver_components = (
+        0.38 * clean_dr["driver_rating"]
+        + 0.34 * clean_dr["race_pace"]
+        + 0.16 * clean_dr["racecraft"]
+        + 0.12 * clean_dr["consistency"]
+    )
+    raw_constructor_components = (
+        0.38 * clean_dr["team_pace"]
+        + 0.22 * clean_dr["chassis"]
+        + 0.18 * clean_dr["power_unit"]
+        + 0.12 * clean_dr["strategy"]
+        + 0.10 * clean_dr["reliability"]
+    )
+    driver_center = float(raw_driver_components.mean())
+    constructor_center = float(raw_constructor_components.mean())
+
+    if remaining.empty:
+        avg_form_scale = 0.0
+    else:
+        avg_form_scale = float(np.mean([_form_scale_for_race(idx, params) for idx in range(len(remaining))]))
+
+    results_by_code = (
+        driver_results.drop_duplicates("code").set_index("code")
+        if driver_results is not None and not driver_results.empty and "code" in driver_results.columns
+        else pd.DataFrame()
+    )
+    result_order = {code: idx for idx, code in enumerate(driver_results["code"].tolist())} if not driver_results.empty else {}
+
+    rows: list[dict[str, Any]] = []
+    for _, row in clean_dr.iterrows():
+        raw_driver_component = 0.38 * row["driver_rating"] + 0.34 * row["race_pace"] + 0.16 * row["racecraft"] + 0.12 * row["consistency"]
+        raw_constructor_component = (
+            0.38 * row["team_pace"]
+            + 0.22 * row["chassis"]
+            + 0.18 * row["power_unit"]
+            + 0.12 * row["strategy"]
+            + 0.10 * row["reliability"]
+        )
+        driver_component = float(_regress_to_mean(raw_driver_component, driver_center, evidence_confidence, 0.82))
+        constructor_component = float(_regress_to_mean(raw_constructor_component, constructor_center, evidence_confidence, 0.68))
+        recent_form_effective = float(_regress_to_mean(row["recent_form"], 75.0, evidence_confidence, 0.45))
+        circuit_fits = [2.2 * _event_fit(row, race) for _, race in remaining.iterrows()]
+        avg_circuit_fit = float(np.mean(circuit_fits)) if circuit_fits else 0.0
+        base_strength_now = float(_combine_strength(driver_component, constructor_component, recent_form_effective, params, form_scale=1.0))
+        base_strength_avg = float(
+            _combine_strength(driver_component, constructor_component, recent_form_effective, params, form_scale=avg_form_scale)
+        )
+
+        code = row["code"]
+        result = results_by_code.loc[code] if not results_by_code.empty and code in results_by_code.index else None
+        expected_points = float(result["expected_points"]) if result is not None else float(row["current_points"])
+        champion_pct = float(result["champion_pct"]) if result is not None else 0.0
+        avg_final_rank = float(result["avg_final_rank"]) if result is not None else 0.0
+
+        rows.append(
+            {
+                "driver": row["driver"],
+                "code": code,
+                "team": row["team"],
+                "current_points": float(row["current_points"]),
+                "expected_future_points": expected_points - float(row["current_points"]),
+                "champion_pct": champion_pct,
+                "avg_final_rank": avg_final_rank,
+                "driver_component": float(driver_component),
+                "constructor_component": float(constructor_component),
+                "qualifying_rating": float(row["qualifying"]),
+                "recent_form": float(row["recent_form"]),
+                "recent_form_effective": recent_form_effective,
+                "avg_form_scale": avg_form_scale,
+                "avg_circuit_fit": avg_circuit_fit,
+                "team_uncertainty_sd": package_sd,
+                "race_noise_sd": float(params.chaos * (1.0 + (100.0 - row["consistency"]) / 180.0)),
+                "base_strength_now": base_strength_now,
+                "base_strength_avg": base_strength_avg,
+                "_order": result_order.get(code, len(result_order) + len(rows)),
+            }
+        )
+
+    diagnostic = pd.DataFrame(rows).sort_values("_order").drop(columns="_order")
+    return diagnostic.head(limit).reset_index(drop=True)
 
 
 def describe_driver(driver_code: str, drivers: pd.DataFrame) -> dict[str, Any]:

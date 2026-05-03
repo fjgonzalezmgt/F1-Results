@@ -337,6 +337,8 @@ def build_analysis_payload(
     drivers: pd.DataFrame,
     calendar: pd.DataFrame,
     notes: str,
+    diagnostics: pd.DataFrame | None = None,
+    scenarios: pd.DataFrame | None = None,
 ) -> dict[str, Any]:
     """Create a compact payload for LLM championship interpretation.
 
@@ -368,7 +370,7 @@ def build_analysis_payload(
         calendar and a fixed ``request`` instruction string.
     """
     next_races = calendar.loc[calendar["completed"] == 0].head(6)
-    return {
+    payload = {
         "driver_championship_top_12": driver_results.head(12).round(2).to_dict(orient="records"),
         "constructor_championship": constructor_results.round(2).to_dict(orient="records"),
         "next_race_winner_probabilities": race_winners.head(15).round(2).to_dict(orient="records"),
@@ -381,6 +383,11 @@ def build_analysis_payload(
             "podria estar ciego por datos cualitativos."
         ),
     }
+    if diagnostics is not None and not diagnostics.empty:
+        payload["model_diagnostics"] = diagnostics.head(12).round(2).to_dict(orient="records")
+    if scenarios is not None and not scenarios.empty:
+        payload["scenario_summary"] = scenarios.round(2).to_dict(orient="records")
+    return payload
 
 
 def call_llm_analysis(model: str, payload: dict[str, Any]) -> str:

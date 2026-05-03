@@ -87,9 +87,12 @@ TEAM_COLORS = {
     "Red Bull Racing": "#1e41ff",
     "Haas F1 Team": "#b6babd",
     "Alpine": "#2293d1",
+    "Alpine F1 Team": "#2293d1",
     "Racing Bulls": "#6692ff",
+    "RB F1 Team": "#6692ff",
     "Audi": "#c0c0c0",
     "Williams": "#00a0de",
     "Cadillac": "#b08d57",
+    "Cadillac F1 Team": "#b08d57",
     "Aston Martin": "#006f62",
 }

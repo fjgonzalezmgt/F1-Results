@@ -166,15 +166,26 @@ def _request_json(
             return json.loads(cache_path.read_text(encoding="utf-8"))
 
     request = Request(url, headers=HTTP_HEADERS)
-    try:
-        with urlopen(request, timeout=REQUEST_TIMEOUT_SECONDS) as response:
-            payload = json.loads(response.read().decode("utf-8"))
-    except HTTPError as exc:
-        raise PublicApiError(f"HTTP {exc.code} al consultar {url}") from exc
-    except URLError as exc:
-        raise PublicApiError(f"No se pudo conectar a {url}: {exc.reason}") from exc
-    except TimeoutError as exc:
-        raise PublicApiError(f"Timeout consultando {url}") from exc
+    retryable_statuses = {429, 500, 502, 503, 504}
+    for attempt in range(4):
+        try:
+            with urlopen(request, timeout=REQUEST_TIMEOUT_SECONDS) as response:
+                payload = json.loads(response.read().decode("utf-8"))
+            break
+        except HTTPError as exc:
+            if exc.code in retryable_statuses and attempt < 3:
+                retry_after = exc.headers.get("Retry-After")
+                try:
+                    wait_seconds = float(retry_after) if retry_after else 1.5 * (attempt + 1)
+                except ValueError:
+                    wait_seconds = 1.5 * (attempt + 1)
+                time.sleep(min(wait_seconds, 8.0))
+                continue
+            raise PublicApiError(f"HTTP {exc.code} al consultar {url}") from exc
+        except URLError as exc:
+            raise PublicApiError(f"No se pudo conectar a {url}: {exc.reason}") from exc
+        except TimeoutError as exc:
+            raise PublicApiError(f"Timeout consultando {url}") from exc
 
     if cache_path:
         cache_path.write_text(json.dumps(payload), encoding="utf-8")
@@ -711,20 +722,34 @@ def _make_team_lookup(base: pd.DataFrame) -> dict[str, str]:
         Mapping from normalised text keys to canonical team name strings.
     """
     lookup: dict[str, str] = {}
+    teams = set(base["team"].dropna().astype(str))
     for team in base["team"].dropna().unique():
         lookup[_normalize_text(team)] = str(team)
+
+    def add_alias(alias: str, candidates: list[str]) -> None:
+        for candidate in candidates:
+            if candidate in teams:
+                lookup[alias] = candidate
+                return
+
     aliases = {
-        "redbull": "Red Bull Racing",
-        "rb": "Racing Bulls",
-        "visacashapprb": "Racing Bulls",
-        "sauber": "Audi",
-        "kicksauber": "Audi",
-        "astonmartin": "Aston Martin",
-        "haas": "Haas F1 Team",
+        "redbull": ["Red Bull Racing"],
+        "rb": ["RB F1 Team", "Racing Bulls"],
+        "rbf1team": ["RB F1 Team", "Racing Bulls"],
+        "racingbulls": ["Racing Bulls", "RB F1 Team"],
+        "visacashapprb": ["RB F1 Team", "Racing Bulls"],
+        "sauber": ["Audi"],
+        "kicksauber": ["Audi"],
+        "astonmartin": ["Aston Martin"],
+        "astonmartinf1team": ["Aston Martin"],
+        "haas": ["Haas F1 Team"],
+        "alpine": ["Alpine F1 Team", "Alpine"],
+        "alpinef1team": ["Alpine F1 Team", "Alpine"],
+        "cadillac": ["Cadillac F1 Team", "Cadillac"],
+        "cadillacf1team": ["Cadillac F1 Team", "Cadillac"],
     }
-    for alias, team in aliases.items():
-        if team in set(base["team"]):
-            lookup[alias] = team
+    for alias, candidates in aliases.items():
+        add_alias(alias, candidates)
     return lookup
 
 
@@ -784,12 +809,178 @@ def _map_api_teams(api_df: pd.DataFrame, base: pd.DataFrame) -> pd.DataFrame:
     return mapped
 
 
+def _sample_confidence(starts: float, prior_starts: float = 8.0) -> float:
+    """Return a bounded evidence weight for a small sample of races."""
+    starts = max(0.0, float(starts))
+    return float(starts / (starts + prior_starts))
+
+
+def _shrink_toward(value: float, center: float, confidence: float) -> float:
+    """Shrink a noisy metric toward a neutral prior according to confidence."""
+    confidence = max(0.0, min(1.0, float(confidence)))
+    return _bounded(float(center) + confidence * (float(value) - float(center)))
+
+
+def _constructor_position_score(position: float, field_size: int) -> float:
+    """Compress constructor standings position into a less extreme team score."""
+    raw_score = _score_from_position(position, field_size)
+    return _bounded(55.0 + 0.72 * (raw_score - 55.0))
+
+
+def fetch_historical_performance_data(
+    season: int,
+    history_seasons: int = 3,
+) -> tuple[pd.DataFrame, pd.DataFrame, list[str]]:
+    """Fetch race and qualifying rows for seasons before ``season``."""
+    history_seasons = max(0, int(history_seasons))
+    result_frames: list[pd.DataFrame] = []
+    qualifying_frames: list[pd.DataFrame] = []
+    errors: list[str] = []
+
+    for historical_season in range(season - history_seasons, season):
+        try:
+            schedule = fetch_jolpica_schedule(historical_season)
+            results, qualifying, season_errors = fetch_completed_jolpica_results(historical_season, schedule)
+        except PublicApiError as exc:
+            errors.append(f"{historical_season}: {exc}")
+            continue
+        errors.extend([f"{historical_season}: {error}" for error in season_errors[:3]])
+        if not results.empty:
+            results = results.copy()
+            results["season"] = historical_season
+            result_frames.append(results)
+        if not qualifying.empty:
+            qualifying = qualifying.copy()
+            qualifying["season"] = historical_season
+            qualifying_frames.append(qualifying)
+
+    historical_results = pd.concat(result_frames, ignore_index=True) if result_frames else pd.DataFrame()
+    historical_qualifying = pd.concat(qualifying_frames, ignore_index=True) if qualifying_frames else pd.DataFrame()
+    return historical_results, historical_qualifying, errors
+
+
+def _historical_priors(
+    results: pd.DataFrame,
+    qualifying: pd.DataFrame,
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Convert historical result rows into driver and team rating priors."""
+    if results.empty:
+        return pd.DataFrame(), pd.DataFrame()
+
+    field_size = max(10, int(results.groupby(["season", "round"])["code"].nunique().max()))
+    grouped = results.groupby("code")
+    race_metrics = grouped.agg(
+        avg_position=("position", "mean"),
+        position_std=("position", "std"),
+        avg_grid=("grid", "mean"),
+        avg_points=("points", "mean"),
+        dnf_rate=("dnf", "mean"),
+        starts=("round", "count"),
+    )
+    race_metrics["position_std"] = race_metrics["position_std"].fillna(0)
+    race_metrics["avg_gain"] = race_metrics["avg_grid"] - race_metrics["avg_position"]
+
+    if not qualifying.empty:
+        qualifying_metrics = qualifying.groupby("code").agg(avg_qualifying=("qualifying_position", "mean"))
+    else:
+        qualifying_metrics = pd.DataFrame()
+
+    driver_rows: list[dict[str, Any]] = []
+    for code, metrics in race_metrics.iterrows():
+        race_position_score = _score_from_position(float(metrics["avg_position"]), field_size)
+        grid_adjusted_score = _bounded(race_position_score + 1.10 * float(metrics["avg_gain"]))
+        points_score = _bounded(50.0 + 1.35 * float(metrics["avg_points"]))
+        race_pace = _bounded(0.65 * race_position_score + 0.25 * grid_adjusted_score + 0.10 * points_score)
+        consistency = _bounded(92.0 - 3.8 * float(metrics["position_std"]) - 18.0 * float(metrics["dnf_rate"]))
+        reliability = _bounded(93.0 - 30.0 * float(metrics["dnf_rate"]))
+        racecraft = _bounded(74.0 + 2.6 * float(metrics["avg_gain"]))
+        if code in qualifying_metrics.index:
+            qualifying_score = _score_from_position(float(qualifying_metrics.loc[code, "avg_qualifying"]), field_size)
+        elif metrics["avg_grid"] > 0:
+            qualifying_score = _score_from_position(float(metrics["avg_grid"]), field_size)
+        else:
+            qualifying_score = race_pace
+        driver_rows.append(
+            {
+                "code": code,
+                "driver_rating": _bounded(0.52 * race_pace + 0.32 * qualifying_score + 0.16 * consistency),
+                "race_pace": race_pace,
+                "qualifying": qualifying_score,
+                "consistency": consistency,
+                "reliability": reliability,
+                "racecraft": racecraft,
+                "recent_form": _bounded(0.60 * race_pace + 0.25 * qualifying_score + 0.15 * points_score),
+                "historical_starts": float(metrics["starts"]),
+            }
+        )
+
+    team_grouped = results.groupby("team")
+    team_metrics = team_grouped.agg(
+        avg_position=("position", "mean"),
+        avg_points=("points", "mean"),
+        dnf_rate=("dnf", "mean"),
+        entries=("round", "count"),
+    )
+    team_rows: list[dict[str, Any]] = []
+    for team, metrics in team_metrics.iterrows():
+        finish_score = _score_from_position(float(metrics["avg_position"]), field_size)
+        points_score = _bounded(52.0 + 1.35 * float(metrics["avg_points"]))
+        team_pace = _bounded(0.62 * finish_score + 0.38 * points_score)
+        team_rows.append(
+            {
+                "team": team,
+                "team_pace": team_pace,
+                "chassis": team_pace,
+                "power_unit": team_pace,
+                "reliability": _bounded(92.0 - 28.0 * float(metrics["dnf_rate"])),
+                "historical_entries": float(metrics["entries"]),
+            }
+        )
+
+    return pd.DataFrame(driver_rows).set_index("code"), pd.DataFrame(team_rows).set_index("team")
+
+
+def _apply_historical_priors(
+    drivers: pd.DataFrame,
+    historical_results: pd.DataFrame,
+    historical_qualifying: pd.DataFrame,
+) -> pd.DataFrame:
+    """Blend historical priors into current editable driver inputs."""
+    if historical_results.empty:
+        return drivers.copy()
+
+    output = drivers.copy()
+    driver_priors, team_priors = _historical_priors(historical_results, historical_qualifying)
+    driver_columns = ["driver_rating", "race_pace", "qualifying", "consistency", "reliability", "racecraft", "recent_form"]
+    team_columns = ["team_pace", "chassis", "power_unit"]
+
+    for idx, row in output.iterrows():
+        code = row["code"]
+        if not driver_priors.empty and code in driver_priors.index:
+            prior = driver_priors.loc[code]
+            prior_weight = min(0.55, 0.70 * _sample_confidence(float(prior["historical_starts"]), prior_starts=20.0))
+            for column in driver_columns:
+                output.loc[idx, column] = _blend(row[column], prior[column], api_weight=prior_weight)
+
+        team = row["team"]
+        if not team_priors.empty and team in team_priors.index:
+            prior = team_priors.loc[team]
+            prior_weight = min(0.50, 0.65 * _sample_confidence(float(prior["historical_entries"]) / 2.0, prior_starts=20.0))
+            for column in team_columns:
+                output.loc[idx, column] = _blend(output.loc[idx, column], prior[column], api_weight=prior_weight)
+            output.loc[idx, "reliability"] = _blend(output.loc[idx, "reliability"], prior["reliability"], api_weight=0.45 * prior_weight)
+
+    return clean_drivers(output)
+
+
 def derive_driver_inputs_from_public_data(
     base_drivers: pd.DataFrame,
     standings: pd.DataFrame,
     constructor_standings: pd.DataFrame,
     results: pd.DataFrame,
     qualifying: pd.DataFrame,
+    historical_results: pd.DataFrame | None = None,
+    historical_qualifying: pd.DataFrame | None = None,
     lookback: int = 5,
 ) -> pd.DataFrame:
     """Translate standings and results into the model's driver rating columns.
@@ -810,6 +1001,10 @@ def derive_driver_inputs_from_public_data(
         Concatenated race results from ``fetch_completed_jolpica_results``.
     qualifying : pd.DataFrame
         Concatenated qualifying results from ``fetch_completed_jolpica_results``.
+    historical_results : pd.DataFrame or None, optional
+        Race-result rows from previous seasons used as driver/team priors.
+    historical_qualifying : pd.DataFrame or None, optional
+        Qualifying rows from previous seasons used as driver/team priors.
     lookback : int, optional
         Number of most recent rounds used when computing rolling metrics.
         Default is 5.
@@ -828,6 +1023,13 @@ def derive_driver_inputs_from_public_data(
     standings = _map_api_teams(_map_api_driver_codes(standings, base), base)
     results = _map_api_teams(_map_api_driver_codes(results, base), base)
     qualifying = _map_api_teams(_map_api_driver_codes(qualifying, base), base)
+    historical_results = historical_results if historical_results is not None else pd.DataFrame()
+    historical_qualifying = historical_qualifying if historical_qualifying is not None else pd.DataFrame()
+    historical_results = _map_api_teams(
+        _map_api_driver_codes(historical_results, base),
+        base,
+    )
+    historical_qualifying = _map_api_driver_codes(historical_qualifying, base)
     constructor_standings = _map_api_teams(constructor_standings, base)
 
     if not standings.empty:
@@ -842,6 +1044,8 @@ def derive_driver_inputs_from_public_data(
                 output.loc[idx, "team"] = api_row.get("team")
             if api_row.get("nationality"):
                 output.loc[idx, "nationality"] = api_row.get("nationality")
+
+    output = _apply_historical_priors(output, historical_results, historical_qualifying)
 
     if results.empty:
         return clean_drivers(output)
@@ -873,7 +1077,7 @@ def derive_driver_inputs_from_public_data(
         constructor_count = max(1, len(constructor_standings))
         constructor_standings = constructor_standings.copy()
         constructor_standings["constructor_score"] = constructor_standings["constructor_position"].map(
-            lambda pos: _score_from_position(float(pos), constructor_count)
+            lambda pos: _constructor_position_score(float(pos), constructor_count)
         )
         constructor_scores = constructor_standings.set_index("team")["constructor_score"]
     else:
@@ -884,13 +1088,14 @@ def derive_driver_inputs_from_public_data(
         if code not in race_metrics.index:
             continue
         metrics = race_metrics.loc[code]
+        confidence = _sample_confidence(float(metrics["starts"]))
         race_position_score = _score_from_position(float(metrics["avg_position"]), field_size)
-        points_score = _bounded(45.0 + 3.1 * float(metrics["avg_points"]))
-        race_pace_api = 0.68 * race_position_score + 0.32 * points_score
-        consistency_api = _bounded(96.0 - 5.0 * float(metrics["position_std"]) - 25.0 * float(metrics["dnf_rate"]))
-        reliability_api = _bounded(96.0 - 38.0 * float(metrics["dnf_rate"]))
-        racecraft_api = _bounded(72.0 + 3.5 * float(metrics["avg_gain"]))
-        recent_form_api = _bounded(0.56 * race_pace_api + 0.44 * points_score)
+        grid_adjusted_score = _bounded(race_position_score + 1.25 * float(metrics["avg_gain"]))
+        points_score = _bounded(48.0 + 1.75 * float(metrics["avg_points"]))
+        race_pace_api = 0.62 * race_position_score + 0.23 * grid_adjusted_score + 0.15 * points_score
+        consistency_api = _bounded(94.0 - 4.2 * float(metrics["position_std"]) - 22.0 * float(metrics["dnf_rate"]))
+        reliability_api = _bounded(94.0 - 34.0 * float(metrics["dnf_rate"]))
+        racecraft_api = _bounded(72.0 + 3.0 * float(metrics["avg_gain"]))
 
         if code in qualifying_metrics.index:
             qualifying_api = _score_from_position(float(qualifying_metrics.loc[code, "avg_qualifying"]), field_size)
@@ -899,13 +1104,28 @@ def derive_driver_inputs_from_public_data(
         else:
             qualifying_api = row["qualifying"]
 
+        race_pace_api = _shrink_toward(race_pace_api, 75.0, confidence)
+        qualifying_api = _shrink_toward(qualifying_api, 75.0, confidence)
+        driver_rating_api = _shrink_toward(0.55 * race_pace_api + 0.45 * qualifying_api, 75.0, confidence)
+        consistency_api = _shrink_toward(consistency_api, 80.0, confidence)
+        reliability_api = _shrink_toward(reliability_api, 86.0, confidence)
+        racecraft_api = _shrink_toward(racecraft_api, 76.0, confidence)
+        recent_form_api = _shrink_toward(
+            0.50 * race_pace_api + 0.30 * qualifying_api + 0.20 * points_score,
+            75.0,
+            confidence,
+        )
+
         team = row["team"]
-        team_result_score = _bounded(45.0 + 3.0 * float(team_points.get(team, 0.0)))
+        team_starts = float(recent.loc[recent["team"] == team, "round"].count())
+        team_confidence = _sample_confidence(team_starts / 2.0)
+        team_result_score = _bounded(52.0 + 1.55 * float(team_points.get(team, 0.0)))
         team_standing_score = float(constructor_scores.get(team, team_result_score))
         team_pace_api = _bounded(0.58 * team_result_score + 0.42 * team_standing_score)
+        team_pace_api = _shrink_toward(team_pace_api, 75.0, team_confidence)
 
         output.loc[idx, "race_pace"] = _blend(row["race_pace"], race_pace_api)
-        output.loc[idx, "driver_rating"] = _blend(row["driver_rating"], 0.55 * race_pace_api + 0.45 * qualifying_api)
+        output.loc[idx, "driver_rating"] = _blend(row["driver_rating"], driver_rating_api)
         output.loc[idx, "qualifying"] = _blend(row["qualifying"], qualifying_api)
         output.loc[idx, "consistency"] = _blend(row["consistency"], consistency_api)
         output.loc[idx, "reliability"] = _blend(row["reliability"], reliability_api)
@@ -1217,6 +1437,7 @@ def refresh_model_inputs_from_public_apis(
     calendar: pd.DataFrame,
     season: int,
     lookback: int = 5,
+    history_seasons: int = 3,
     use_openf1: bool = True,
 ) -> PublicApiResult:
     """Fetch public API data and return updated model input tables.
@@ -1237,6 +1458,9 @@ def refresh_model_inputs_from_public_apis(
     lookback : int, optional
         Number of recent rounds used when computing rolling driver metrics.
         Default is 5.
+    history_seasons : int, optional
+        Number of previous seasons used as historical driver/team priors.
+        Default is 3.
     use_openf1 : bool, optional
         Whether to enrich the calendar with OpenF1 weather and race-control
         data. Default is ``True``.
@@ -1264,6 +1488,18 @@ def refresh_model_inputs_from_public_apis(
     completed_sprint_rounds, sprint_errors = fetch_completed_jolpica_sprints(season, schedule)
     errors.extend(result_errors[:5])
     errors.extend(sprint_errors[:3])
+    historical_results = pd.DataFrame()
+    historical_qualifying = pd.DataFrame()
+    if history_seasons > 0:
+        historical_results, historical_qualifying, history_errors = fetch_historical_performance_data(
+            season,
+            history_seasons=history_seasons,
+        )
+        errors.extend(history_errors[:6])
+        sources.extend(
+            f"{JOLPICA_BASE_URL}/ergast/f1/{historical_season}/results.json"
+            for historical_season in range(season - history_seasons, season)
+        )
 
     completed_rounds = set(results["round"].dropna().astype(int).unique()) if not results.empty else set()
     updated_calendar = build_calendar_from_public_data(
@@ -1278,11 +1514,16 @@ def refresh_model_inputs_from_public_apis(
         constructors,
         results,
         qualifying,
+        historical_results=historical_results,
+        historical_qualifying=historical_qualifying,
         lookback=lookback,
     )
 
     summary.append(f"Jolpica: {len(schedule)} carreras, {len(standings)} pilotos en standings.")
     summary.append(f"Jolpica: {len(completed_rounds)} rondas con resultados y {len(qualifying)} filas de qualy.")
+    if history_seasons > 0:
+        history_rounds = historical_results[["season", "round"]].drop_duplicates().shape[0] if not historical_results.empty else 0
+        summary.append(f"Historico: {history_rounds} carreras de {history_seasons} temporadas usadas como prior.")
     if completed_sprint_rounds:
         summary.append(f"Jolpica: sprints ya publicados en rondas {sorted(completed_sprint_rounds)}.")
 

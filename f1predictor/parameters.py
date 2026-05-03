@@ -30,7 +30,12 @@ class SimParams:
     constructor_weight : float
         Relative weight of the constructor-pace component in base strength.
     form_weight : float
-        Relative weight of the recent-form component in base strength.
+        Initial relative weight of the recent-form component in base
+        strength. The simulator decays this effect across future races so
+        early-season form does not dominate the full calendar.
+    form_decay_races : float
+        Number of future races over which recent-form influence fades.
+        Lower values make form mostly affect the next few events.
     qualifying_weight : float
         Scaling factor controlling how strongly grid position carries over
         to race performance.
@@ -47,6 +52,10 @@ class SimParams:
     development_drift : float
         Standard deviation of the per-team performance drift that grows
         linearly across the season to model in-season development.
+    team_uncertainty : float
+        Standard deviation of persistent per-team package uncertainty. This
+        widens the true-car-performance distribution when only a few rounds
+        have been completed.
     """
 
     simulations: int = 4000
@@ -55,10 +64,12 @@ class SimParams:
     include_sprints: bool = True
     driver_weight: float = 0.42
     constructor_weight: float = 0.48
-    form_weight: float = 0.10
+    form_weight: float = 0.06
+    form_decay_races: float = 2.5
     qualifying_weight: float = 0.72
     chaos: float = 5.5
     reliability_multiplier: float = 1.0
     weather_multiplier: float = 1.0
     safety_car_multiplier: float = 1.0
     development_drift: float = 2.4
+    team_uncertainty: float = 6.0
