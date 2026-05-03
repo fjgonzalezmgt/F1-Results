@@ -12,7 +12,7 @@
 ![Conda](https://img.shields.io/badge/Conda-environment-44A833?logo=anaconda&logoColor=white)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
-Aplicacion Streamlit para simular el campeonato de Formula 1 2026 combinando un motor Monte Carlo vectorizado, un modelo piloto/constructor multivariable, caracteristicas por circuito y una capa LLM que actualiza datos en vivo, busca contexto de carrera y convierte probabilidades en analisis narrativo.
+Aplicacion Streamlit para simular el campeonato de Formula 1 desde 2026 en adelante, tomando la fecha en curso como referencia para determinar carreras disputadas y pendientes. Combina un motor Monte Carlo vectorizado, un modelo piloto/constructor multivariable, caracteristicas por circuito y una capa LLM que actualiza datos en vivo, busca contexto de carrera y convierte probabilidades en analisis narrativo.
 
 ---
 
@@ -298,9 +298,9 @@ La sintesis completa de modelos existentes, variables usadas y metodologia esta 
 
 | Fuente | URL |
 |---|---|
-| F1 drivers 2026 | https://www.formula1.com/en/drivers |
-| F1 standings 2026 | https://www.formula1.com/en/results/2026/drivers |
-| F1 calendar 2026 | https://www.formula1.com/en/racing/2026 |
+| F1 drivers | https://www.formula1.com/en/drivers |
+| F1 standings | https://www.formula1.com/en/results |
+| F1 calendar | https://www.formula1.com/en/racing |
 | Jolpica F1 API | https://github.com/jolpica/jolpica-f1 |
 | FastF1 | https://docs.fastf1.dev/ |
 | OpenF1 | https://openf1.org/docs/ |
