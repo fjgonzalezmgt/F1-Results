@@ -38,6 +38,8 @@ Aplicacion Streamlit para simular el campeonato de Formula 1 2026 combinando un 
 | **Modelo piloto/constructor** | Combina 13 ratings por piloto (habilidad, clasificacion, ritmo, consistencia, neumaticos, lluvia, racecraft…) con 5 atributos de equipo (ritmo, chasis, motor, estrategia, fiabilidad). |
 | **Circuitos** | Cada GP modifica el modelo segun carga aerodinamica, potencia, degradacion, dificultad de adelantamiento, riesgo de clima y safety car, e importancia de clasificacion. |
 | **Sprints** | Suma puntos de los sprints pendientes de forma configurable desde la barra lateral. |
+| **Escenarios** | Calcula variantes Conservador / Base / Agresivo modificando forma, parrilla, caos e incertidumbre para comparar rangos de probabilidad de titulo. |
+| **Diagnostico** | Tabla de explicabilidad que descompone fuerza piloto, fuerza constructora, forma efectiva, fit de circuito y ruido de carrera para los principales candidatos al titulo. |
 | **APIs publicas** | El boton *Actualizar info* consulta Jolpica/Ergast y OpenF1, usa temporadas historicas como prior, recalibra ratings con resultados reales y guarda CSV en disco. |
 | **Formula1.com via LLM** | El boton *Actualizar F1.com con LLM* usa `web_search` de OpenAI restringido a Formula1.com para line-up, standings y calendario oficial. |
 | **LLM de contexto** | Busca noticias del proximo GP (clima, parrilla, upgrades, sanciones) y genera un veredicto narrativo sobre pilotos, constructores y escenarios. |
@@ -191,7 +193,7 @@ flowchart TD
     C -- No --> F
     D & E --> F[Ajustar pesos e\nincertidumbre en sidebar]
     F --> G[Pulsar Simular campeonato]
-    G --> H[Explorar tabs\nPilotos · Constructores · GP]
+    G --> H[Explorar tabs\nPilotos · Constructores · GP\nEscenarios · Diagnostico]
     H --> I{¿Analisis LLM?}
     I -- Si --> J[Buscar contexto GP\nGenerar analisis]
     I -- No --> K([Fin])
@@ -269,6 +271,7 @@ Este proyecto no intenta fingir precision de telemetria:
 - **Calibrable** — los pesos y multiplicadores son sliders en tiempo real.
 - **Actualizable** — dos botones traen datos reales (APIs REST y Formula1.com via LLM).
 - **Narrativo** — el LLM convierte numeros en veredictos accionables.
+- **Documentado** — todas las funciones siguen convencion NumPy docstring para facilitar la lectura del codigo y la generacion de documentacion.
 
 La sintesis completa de modelos existentes, variables usadas y metodologia esta en [docs/research_f1_models.md](docs/research_f1_models.md).
 
