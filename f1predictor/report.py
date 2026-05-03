@@ -25,14 +25,32 @@ from f1predictor.parameters import SimParams
 
 
 def persist_llm_analysis(markdown: str) -> Path:
-    """Save the latest LLM analysis as the persistent Markdown source."""
+    """Save the latest LLM analysis as the persistent Markdown source.
+
+    Parameters
+    ----------
+    markdown : str
+        Markdown-formatted analysis text produced by the LLM.
+
+    Returns
+    -------
+    Path
+        Absolute path to the written ``analisis_llm.md`` file.
+    """
     LLM_ANALYSIS_PATH.parent.mkdir(parents=True, exist_ok=True)
     LLM_ANALYSIS_PATH.write_text(markdown.strip() + "\n", encoding="utf-8")
     return LLM_ANALYSIS_PATH
 
 
 def latest_llm_analysis() -> str:
-    """Return the latest persisted LLM analysis, if one exists."""
+    """Return the latest persisted LLM analysis, if one exists.
+
+    Returns
+    -------
+    str
+        Markdown text read from ``analisis_llm.md``, or an empty string
+        if the file does not exist.
+    """
     if not LLM_ANALYSIS_PATH.exists():
         return ""
     return LLM_ANALYSIS_PATH.read_text(encoding="utf-8").strip()
@@ -71,7 +89,31 @@ def persist_montecarlo_results(
     calendar: pd.DataFrame,
     params: SimParams,
 ) -> Path:
-    """Save the latest Monte Carlo outputs as a persistent Excel workbook."""
+    """Save the latest Monte Carlo outputs as a persistent Excel workbook.
+
+    Writes six sheets: ``pilotos``, ``constructores``, ``gp_probabilidades``,
+    ``inputs_pilotos``, ``inputs_calendario`` and ``parametros``.
+
+    Parameters
+    ----------
+    driver_results : pd.DataFrame
+        Driver championship summary from ``simulate_many``.
+    constructor_results : pd.DataFrame
+        Constructor championship summary from ``simulate_many``.
+    race_winners : pd.DataFrame
+        Per-race winner probabilities from ``simulate_many``.
+    drivers : pd.DataFrame
+        Cleaned driver seed table used as simulation input.
+    calendar : pd.DataFrame
+        Cleaned calendar table used as simulation input.
+    params : SimParams
+        Simulation parameters saved in the ``parametros`` sheet.
+
+    Returns
+    -------
+    Path
+        Absolute path to the written ``resultados_montecarlo.xlsx`` file.
+    """
     MONTECARLO_RESULTS_PATH.parent.mkdir(parents=True, exist_ok=True)
     params_df = pd.DataFrame(
         [{"parametro": key, "valor": value} for key, value in asdict(params).items()]
@@ -95,7 +137,44 @@ def render_report(
     params: SimParams,
     markdown_analysis: str | None = None,
 ) -> Path:
-    """Render the LaTeX report and compile it with pdflatex."""
+    """Render the LaTeX report and compile it with pdflatex.
+
+    Fills every ``__PLACEHOLDER__`` in the LaTeX template with formatted
+    tables, figures and the LLM analysis, writes the ``.tex`` source and
+    runs ``pdflatex`` to produce the final PDF.
+
+    Parameters
+    ----------
+    driver_results : pd.DataFrame
+        Driver championship summary from ``simulate_many``.
+    constructor_results : pd.DataFrame
+        Constructor championship summary from ``simulate_many``.
+    race_winners : pd.DataFrame
+        Per-race winner probabilities from ``simulate_many``.
+    drivers : pd.DataFrame
+        Cleaned driver seed table used as simulation input.
+    calendar : pd.DataFrame
+        Cleaned calendar table used to determine the next Grand Prix.
+    params : SimParams
+        Simulation parameters shown in the parameters table.
+    markdown_analysis : str or None, optional
+        LLM narrative analysis to embed; falls back to the persisted
+        ``analisis_llm.md`` when ``None``.
+
+    Returns
+    -------
+    Path
+        Absolute path to the compiled ``reporte_f1.pdf``.
+
+    Raises
+    ------
+    ValueError
+        If no LLM analysis is available (neither argument nor persisted file).
+    FileNotFoundError
+        If the LaTeX template does not exist at ``REPORT_TEMPLATE_PATH``.
+    RuntimeError
+        If ``pdflatex`` exits with a non-zero return code.
+    """
     REPORT_DIR.mkdir(parents=True, exist_ok=True)
     analysis = (markdown_analysis or latest_llm_analysis()).strip()
     if not analysis:
@@ -162,7 +241,26 @@ def save_report_figures(
     constructor_results: pd.DataFrame,
     next_race_winners: pd.DataFrame,
 ) -> dict[str, Path]:
-    """Generate report figures as PNG files under the project figs folder."""
+    """Generate report figures as PNG files under the project figs folder.
+
+    Produces three horizontal bar charts: driver championship probabilities,
+    constructor championship probabilities and next-race win probabilities.
+
+    Parameters
+    ----------
+    driver_results : pd.DataFrame
+        Driver championship summary from ``simulate_many``.
+    constructor_results : pd.DataFrame
+        Constructor championship summary from ``simulate_many``.
+    next_race_winners : pd.DataFrame
+        Winner probabilities for the next upcoming Grand Prix.
+
+    Returns
+    -------
+    dict[str, Path]
+        Mapping with keys ``"drivers"``, ``"constructors"`` and
+        ``"next_race"`` pointing to the written PNG paths.
+    """
     FIGS_DIR.mkdir(parents=True, exist_ok=True)
     driver_path = FIGS_DIR / "pilotos_campeonato.png"
     constructor_path = FIGS_DIR / "constructores_campeonato.png"
@@ -199,7 +297,23 @@ def save_report_figures(
 
 
 def markdown_to_latex(markdown: str) -> str:
-    """Convert the app's simple Markdown analysis into basic LaTeX."""
+    """Convert the app's simple Markdown analysis into basic LaTeX.
+
+    Handles headings (``#`` through ``####``), unordered bullet lists
+    (``-`` or ``*``), inline bold (``**text**``) and inline code
+    (`` `text` ``).  Horizontal rules and blank lines are preserved as
+    paragraph breaks.
+
+    Parameters
+    ----------
+    markdown : str
+        Markdown-formatted text, typically the LLM narrative analysis.
+
+    Returns
+    -------
+    str
+        LaTeX source string suitable for direct inclusion in a ``.tex`` file.
+    """
     lines = markdown.splitlines()
     output: list[str] = []
     in_items = False
@@ -247,6 +361,24 @@ def _simulation_summary(
     next_race_winners: pd.DataFrame,
     params: SimParams,
 ) -> str:
+    """Build a key-value LaTeX table summarising the simulation highlights.
+
+    Parameters
+    ----------
+    driver_results : pd.DataFrame
+        Driver championship summary; uses the first row as the favourite.
+    constructor_results : pd.DataFrame
+        Constructor championship summary; uses the first row as the leader.
+    next_race_winners : pd.DataFrame
+        Winner probabilities for the next Grand Prix.
+    params : SimParams
+        Simulation parameters; exposes the iteration count.
+
+    Returns
+    -------
+    str
+        LaTeX key-value table string produced by ``_key_value_table``.
+    """
     driver = driver_results.iloc[0]
     constructor = constructor_results.iloc[0]
     race = next_race_winners.iloc[0] if not next_race_winners.empty else None
@@ -261,6 +393,18 @@ def _simulation_summary(
 
 
 def _params_table(params: SimParams) -> str:
+    """Build a key-value LaTeX table of all simulation parameters.
+
+    Parameters
+    ----------
+    params : SimParams
+        Frozen simulation parameters dataclass.
+
+    Returns
+    -------
+    str
+        LaTeX key-value table string produced by ``_key_value_table``.
+    """
     labels = {
         "simulations": "Simulaciones",
         "seed": "Semilla",
@@ -283,6 +427,20 @@ def _params_table(params: SimParams) -> str:
 
 
 def _data_notes(drivers: pd.DataFrame, calendar: pd.DataFrame) -> str:
+    """Build a key-value LaTeX table with counts from the input data.
+
+    Parameters
+    ----------
+    drivers : pd.DataFrame
+        Cleaned driver table used to report the number of active drivers.
+    calendar : pd.DataFrame
+        Cleaned calendar table used to report completed and pending events.
+
+    Returns
+    -------
+    str
+        LaTeX key-value table string produced by ``_key_value_table``.
+    """
     completed = int(calendar["completed"].sum()) if "completed" in calendar.columns else 0
     total = len(calendar)
     rows = [
@@ -303,6 +461,31 @@ def _save_bar_chart(
     labels: dict[str, str],
     path: Path,
 ) -> None:
+    """Render a horizontal Plotly bar chart and export it as a PNG file.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Source data for the chart.
+    x : str
+        Column name mapped to the x-axis (numeric values).
+    y : str
+        Column name mapped to the y-axis (category labels).
+    color : str
+        Column name used to colour-code bars; matched against ``TEAM_COLORS``.
+    title : str
+        Chart title displayed above the figure.
+    labels : dict[str, str]
+        Axis label overrides passed to ``plotly.express.bar``.
+    path : Path
+        Destination path for the exported PNG file.
+
+    Raises
+    ------
+    RuntimeError
+        If ``plotly`` is not installed or ``pdflatex`` / Kaleido cannot
+        export the PNG image.
+    """
     if df.empty:
         return
     try:
@@ -370,11 +553,29 @@ def _save_bar_chart(
 
 
 def _chart_left_margin(labels: pd.Series) -> int:
+    """Compute a left margin in pixels proportional to the longest label.
+
+    Parameters
+    ----------
+    labels : pd.Series
+        Category labels displayed on the y-axis of the chart.
+
+    Returns
+    -------
+    int
+        Left margin in pixels, clamped to [230, 380].
+    """
     longest = max((len(str(value)) for value in labels), default=12)
     return min(380, max(230, longest * 12 + 70))
 
 
 def _configure_kaleido_browser() -> None:
+    """Set the ``BROWSER_PATH`` environment variable for Kaleido PNG export.
+
+    Searches common Windows installation paths for ``chrome.exe`` and sets
+    ``BROWSER_PATH`` when found.  Does nothing if the variable is already
+    set or if Chrome cannot be located.
+    """
     if os.getenv("BROWSER_PATH"):
         return
     chrome_candidates = [
@@ -389,6 +590,21 @@ def _configure_kaleido_browser() -> None:
 
 
 def _figure_latex(path: Path, caption: str) -> str:
+    """Build a LaTeX ``figure`` environment for a PNG chart.
+
+    Parameters
+    ----------
+    path : Path
+        Absolute path to the PNG file; converted to a relative path from
+        the report directory for the LaTeX ``\\includegraphics`` command.
+    caption : str
+        Figure caption; special LaTeX characters are escaped.
+
+    Returns
+    -------
+    str
+        LaTeX ``figure`` block as a multi-line string.
+    """
     relative = Path("..") / path.relative_to(path.parents[1])
     return "\n".join(
         [
@@ -402,6 +618,24 @@ def _figure_latex(path: Path, caption: str) -> str:
 
 
 def _table_to_latex(df: pd.DataFrame, columns: list[str], headers: list[str]) -> str:
+    """Render a DataFrame subset as a styled LaTeX ``longtable``.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Source DataFrame; columns not present in ``df`` are silently skipped.
+    columns : list[str]
+        Ordered list of column names to include.
+    headers : list[str]
+        Display headers corresponding to each entry in ``columns``.
+
+    Returns
+    -------
+    str
+        LaTeX ``longtable`` source with alternating row colours and a dark
+        header row, or an ``\\emph{Sin datos disponibles.}`` fallback when
+        ``df`` is empty.
+    """
     available = [column for column in columns if column in df.columns]
     header_map = dict(zip(columns, headers))
     if df.empty or not available:
@@ -427,6 +661,19 @@ def _table_to_latex(df: pd.DataFrame, columns: list[str], headers: list[str]) ->
 
 
 def _key_value_table(rows: list[tuple[str, str]]) -> str:
+    """Render a list of key-value pairs as a two-column LaTeX table.
+
+    Parameters
+    ----------
+    rows : list[tuple[str, str]]
+        Sequence of ``(key, value)`` string pairs to display.
+
+    Returns
+    -------
+    str
+        LaTeX ``tabular`` source with a dark header row and alternating
+        row colours.
+    """
     lines = [
         r"\begin{center}",
         r"\rowcolors{2}{GIASoft}{white}",
@@ -440,6 +687,19 @@ def _key_value_table(rows: list[tuple[str, str]]) -> str:
 
 
 def _format_cell(value: object) -> str:
+    """Format a single table cell value as a LaTeX-escaped string.
+
+    Parameters
+    ----------
+    value : object
+        Cell value from a DataFrame; floats are formatted with two decimal
+        places and NaN/None renders as an empty string.
+
+    Returns
+    -------
+    str
+        LaTeX-escaped string representation of ``value``.
+    """
     if pd.isna(value):
         return ""
     if isinstance(value, float):
@@ -448,6 +708,21 @@ def _format_cell(value: object) -> str:
 
 
 def _inline_markdown(text: str) -> str:
+    """Convert inline Markdown bold and code spans to LaTeX equivalents.
+
+    Escapes special LaTeX characters first, then replaces ``**text**``
+    with ``\\textbf{text}`` and `` `text` `` with ``\\texttt{text}``.
+
+    Parameters
+    ----------
+    text : str
+        Raw Markdown text that may contain inline formatting.
+
+    Returns
+    -------
+    str
+        LaTeX-safe string with inline formatting commands applied.
+    """
     escaped = _latex_escape(text)
     escaped = re.sub(r"\*\*(.+?)\*\*", r"\\textbf{\1}", escaped)
     escaped = re.sub(r"`(.+?)`", r"\\texttt{\1}", escaped)
@@ -455,6 +730,21 @@ def _inline_markdown(text: str) -> str:
 
 
 def _latex_escape(text: str) -> str:
+    """Escape all special LaTeX characters in a plain-text string.
+
+    Replaces ``\\``, ``&``, ``%``, ``$``, ``#``, ``_``, ``{``, ``}``,
+    ``~`` and ``^`` with their safe LaTeX command equivalents.
+
+    Parameters
+    ----------
+    text : str
+        Plain text that may contain LaTeX special characters.
+
+    Returns
+    -------
+    str
+        String safe to embed directly in LaTeX source.
+    """
     replacements = {
         "\\": r"\textbackslash{}",
         "&": r"\&",
