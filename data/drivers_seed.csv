@@ -1,0 +1,23 @@
+driver,code,team,nationality,current_points,driver_rating,qualifying,race_pace,consistency,tyre_management,wet_skill,racecraft,team_pace,chassis,power_unit,strategy,reliability,recent_form
+Kimi Antonelli,ANT,Mercedes,ITA,75,91,94,92,85,84,86,85,95,94,94,88,91,96
+George Russell,RUS,Mercedes,GBR,68,90,91,91,89,86,88,87,95,94,94,88,91,93
+Charles Leclerc,LEC,Ferrari,MON,55,92,94,90,84,82,84,88,90,89,91,84,88,89
+Lewis Hamilton,HAM,Ferrari,GBR,43,93,88,91,87,88,94,92,90,89,91,84,88,84
+Lando Norris,NOR,McLaren,GBR,33,91,90,91,86,88,87,89,89,91,88,87,90,83
+Oscar Piastri,PIA,McLaren,AUS,28,90,89,90,88,89,84,87,89,91,88,87,90,82
+Oliver Bearman,BEA,Haas F1 Team,GBR,17,82,81,82,80,79,78,80,78,77,80,78,82,83
+Pierre Gasly,GAS,Alpine,FRA,16,84,82,84,82,83,82,84,77,78,77,78,82,82
+Max Verstappen,VER,Red Bull Racing,NED,16,96,94,96,92,90,93,95,83,84,86,86,83,74
+Liam Lawson,LAW,Racing Bulls,NZL,10,80,80,80,79,78,80,81,76,77,76,76,81,79
+Arvid Lindblad,LIN,Racing Bulls,GBR,4,78,79,77,76,76,77,76,76,77,76,76,81,77
+Isack Hadjar,HAD,Red Bull Racing,FRA,4,80,82,79,75,77,78,79,83,84,86,86,83,76
+Gabriel Bortoleto,BOR,Audi,BRA,2,79,78,78,78,79,77,78,73,72,76,73,72,75
+Carlos Sainz,SAI,Williams,ESP,2,88,86,88,88,87,84,89,74,75,76,75,80,73
+Esteban Ocon,OCO,Haas F1 Team,FRA,1,82,80,81,79,80,80,82,78,77,80,78,82,76
+Franco Colapinto,COL,Alpine,ARG,1,78,77,78,75,77,76,78,77,78,77,78,82,75
+Nico Hulkenberg,HUL,Audi,GER,0,83,84,82,85,83,81,83,73,72,76,73,72,72
+Alexander Albon,ALB,Williams,THA,0,86,84,86,84,84,82,87,74,75,76,75,80,70
+Valtteri Bottas,BOT,Cadillac,FIN,0,83,82,82,86,83,80,82,68,68,70,70,68,68
+Sergio Perez,PER,Cadillac,MEX,0,84,80,84,80,84,82,86,68,68,70,70,68,68
+Fernando Alonso,ALO,Aston Martin,ESP,0,90,88,89,91,90,89,92,67,69,68,74,77,66
+Lance Stroll,STR,Aston Martin,CAN,0,76,74,75,73,76,78,76,67,69,68,74,77,64

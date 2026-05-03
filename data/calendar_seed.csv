@@ -1,0 +1,23 @@
+round,grand_prix,country,circuit,race_date,sprint_remaining,completed,track_type,downforce,power,tyre_stress,overtake_difficulty,weather_risk,safety_car_risk,qualifying_importance
+1,Australian GP,Australia,Albert Park,2026-03-08,0,1,street-hybrid,65,72,58,45,25,45,62
+2,Chinese GP,China,Shanghai,2026-03-15,0,1,permanent,66,76,68,42,20,35,58
+3,Japanese GP,Japan,Suzuka,2026-03-29,0,1,permanent,86,76,72,55,30,35,70
+4,Miami GP,USA,Miami International Autodrome,2026-05-03,0,0,street-hybrid,62,70,60,55,55,45,68
+5,Canadian GP,Canada,Circuit Gilles Villeneuve,2026-05-24,1,0,street-hybrid,58,80,50,45,50,55,60
+6,Monaco GP,Monaco,Circuit de Monaco,2026-06-07,0,0,street,95,25,50,95,35,75,98
+7,Barcelona-Catalunya GP,Spain,Circuit de Barcelona-Catalunya,2026-06-14,0,0,permanent,85,65,75,60,25,35,75
+8,Austrian GP,Austria,Red Bull Ring,2026-06-28,0,0,permanent,55,85,55,45,35,40,55
+9,British GP,Great Britain,Silverstone,2026-07-05,1,0,permanent,80,75,70,45,55,35,65
+10,Belgian GP,Belgium,Spa-Francorchamps,2026-07-19,0,0,permanent,70,90,60,35,65,50,55
+11,Hungarian GP,Hungary,Hungaroring,2026-07-26,0,0,permanent,85,45,75,80,45,55,82
+12,Dutch GP,Netherlands,Zandvoort,2026-08-23,1,0,permanent,85,55,70,75,65,60,85
+13,Italian GP,Italy,Monza,2026-09-06,0,0,permanent,35,98,45,35,25,45,55
+14,Spanish GP,Spain,Madrid,2026-09-13,0,0,street-hybrid,65,65,65,60,30,65,72
+15,Azerbaijan GP,Azerbaijan,Baku City Circuit,2026-09-26,0,0,street,45,88,55,55,25,75,70
+16,Singapore GP,Singapore,Marina Bay Street Circuit,2026-10-11,1,0,street,92,40,85,82,70,85,88
+17,United States GP,USA,Circuit of The Americas,2026-10-25,0,0,permanent,72,75,68,45,30,40,60
+18,Mexico City GP,Mexico,Autodromo Hermanos Rodriguez,2026-11-01,0,0,permanent,75,70,65,55,35,45,65
+19,Sao Paulo GP,Brazil,Interlagos,2026-11-08,0,0,permanent,70,70,72,50,75,60,62
+20,Las Vegas GP,USA,Las Vegas Strip Circuit,2026-11-21,0,0,street,35,95,45,40,20,55,55
+21,Qatar GP,Qatar,Lusail,2026-11-29,0,0,permanent,78,75,90,60,10,40,65
+22,Abu Dhabi GP,UAE,Yas Marina,2026-12-06,0,0,permanent,70,75,55,55,10,35,60
