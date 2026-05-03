@@ -810,19 +810,63 @@ def _map_api_teams(api_df: pd.DataFrame, base: pd.DataFrame) -> pd.DataFrame:
 
 
 def _sample_confidence(starts: float, prior_starts: float = 8.0) -> float:
-    """Return a bounded evidence weight for a small sample of races."""
+    """Return a bounded evidence weight for a small sample of races.
+
+    Parameters
+    ----------
+    starts : float
+        Number of observed race starts (or equivalent entries).
+    prior_starts : float, optional
+        Pseudo-count of starts assumed before any data is observed.
+        Default is 8.0.
+
+    Returns
+    -------
+    float
+        Confidence weight in [0, 1): approaches 0 with few starts
+        and approaches 1 as starts grows relative to ``prior_starts``.
+    """
     starts = max(0.0, float(starts))
     return float(starts / (starts + prior_starts))
 
 
 def _shrink_toward(value: float, center: float, confidence: float) -> float:
-    """Shrink a noisy metric toward a neutral prior according to confidence."""
+    """Shrink a noisy metric toward a neutral prior according to confidence.
+
+    Parameters
+    ----------
+    value : float
+        Observed metric value to shrink.
+    center : float
+        Neutral prior value to shrink toward.
+    confidence : float
+        Evidence weight in [0, 1]; 0 returns ``center``, 1 returns ``value``.
+
+    Returns
+    -------
+    float
+        Blended value clipped to [1, 100].
+    """
     confidence = max(0.0, min(1.0, float(confidence)))
     return _bounded(float(center) + confidence * (float(value) - float(center)))
 
 
 def _constructor_position_score(position: float, field_size: int) -> float:
-    """Compress constructor standings position into a less extreme team score."""
+    """Compress a constructor standings position into a less extreme team score.
+
+    Parameters
+    ----------
+    position : float
+        Constructor standings position (1-indexed).
+    field_size : int
+        Total number of constructors used to scale the range.
+
+    Returns
+    -------
+    float
+        Score in [1, 100], compressed toward 55 relative to
+        ``_score_from_position``.
+    """
     raw_score = _score_from_position(position, field_size)
     return _bounded(55.0 + 0.72 * (raw_score - 55.0))
 
@@ -831,7 +875,24 @@ def fetch_historical_performance_data(
     season: int,
     history_seasons: int = 3,
 ) -> tuple[pd.DataFrame, pd.DataFrame, list[str]]:
-    """Fetch race and qualifying rows for seasons before ``season``."""
+    """Fetch race and qualifying results for seasons prior to ``season``.
+
+    Parameters
+    ----------
+    season : int
+        Target F1 season year; data is fetched for seasons before this.
+    history_seasons : int, optional
+        Number of preceding seasons to fetch. Default is 3.
+
+    Returns
+    -------
+    tuple[pd.DataFrame, pd.DataFrame, list[str]]
+        * **historical_results** – Concatenated race-result rows with a
+          ``season`` column added; empty DataFrame if nothing is available.
+        * **historical_qualifying** – Concatenated qualifying rows with a
+          ``season`` column; empty DataFrame if nothing is available.
+        * **errors** – List of error messages for failed season fetches.
+    """
     history_seasons = max(0, int(history_seasons))
     result_frames: list[pd.DataFrame] = []
     qualifying_frames: list[pd.DataFrame] = []
@@ -863,7 +924,23 @@ def _historical_priors(
     results: pd.DataFrame,
     qualifying: pd.DataFrame,
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
-    """Convert historical result rows into driver and team rating priors."""
+    """Convert historical result rows into driver and team rating priors.
+
+    Parameters
+    ----------
+    results : pd.DataFrame
+        Concatenated race-result rows from one or more historical seasons.
+    qualifying : pd.DataFrame
+        Concatenated qualifying rows; may be empty.
+
+    Returns
+    -------
+    tuple[pd.DataFrame, pd.DataFrame]
+        * **driver_priors** – DataFrame indexed by driver code with rating
+          columns derived from historical performance metrics.
+        * **team_priors** – DataFrame indexed by team name with pace and
+          reliability priors derived from historical team statistics.
+    """
     if results.empty:
         return pd.DataFrame(), pd.DataFrame()
 
@@ -945,7 +1022,22 @@ def _apply_historical_priors(
     historical_results: pd.DataFrame,
     historical_qualifying: pd.DataFrame,
 ) -> pd.DataFrame:
-    """Blend historical priors into current editable driver inputs."""
+    """Blend historical priors into current editable driver inputs.
+
+    Parameters
+    ----------
+    drivers : pd.DataFrame
+        Current cleaned driver seed table to update.
+    historical_results : pd.DataFrame
+        Concatenated race-result rows from previous seasons.
+    historical_qualifying : pd.DataFrame
+        Concatenated qualifying rows from previous seasons.
+
+    Returns
+    -------
+    pd.DataFrame
+        Cleaned driver table with prior-blended rating columns.
+    """
     if historical_results.empty:
         return drivers.copy()
 

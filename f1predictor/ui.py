@@ -193,7 +193,19 @@ def run_simulation_cached(
 
 
 def build_scenario_params(params: SimParams) -> dict[str, SimParams]:
-    """Create conservative/base/aggressive scenario parameter sets."""
+    """Create conservative, base and aggressive scenario parameter sets.
+
+    Parameters
+    ----------
+    params : SimParams
+        Base simulation parameters from which scenarios are derived.
+
+    Returns
+    -------
+    dict[str, SimParams]
+        Dictionary mapping scenario names (``"Conservador"``, ``"Base"``,
+        ``"Agresivo"``) to their corresponding ``SimParams`` instances.
+    """
     scenario_simulations = min(params.simulations, 8000)
     return {
         "Conservador": replace(
@@ -228,7 +240,27 @@ def run_scenarios_cached(
     calendar_csv: str,
     params: SimParams,
 ) -> pd.DataFrame:
-    """Run compact scenario simulations and return top driver rows."""
+    """Run compact scenario simulations and return top driver rows.
+
+    Accepts CSV strings rather than DataFrames so that Streamlit can hash
+    the inputs for cache invalidation.
+
+    Parameters
+    ----------
+    drivers_csv : str
+        CSV serialisation of the driver table.
+    calendar_csv : str
+        CSV serialisation of the calendar table.
+    params : SimParams
+        Base simulation parameters; scenario variants are derived internally.
+
+    Returns
+    -------
+    pd.DataFrame
+        Long-format DataFrame with columns ``escenario``, ``rank``,
+        ``driver``, ``team``, ``expected_points``, ``avg_final_rank``,
+        ``champion_pct``, ``top3_pct`` and ``simulations``.
+    """
     drivers = clean_drivers(dataframe_from_csv_text(drivers_csv))
     calendar = clean_calendar(dataframe_from_csv_text(calendar_csv))
     rows: list[dict[str, object]] = []
@@ -261,10 +293,11 @@ def render_sidebar(calendar: pd.DataFrame) -> tuple[SimParams, str, int, int]:
 
     Returns
     -------
-    tuple[SimParams, str, int]
+    tuple[SimParams, str, int, int]
         * **params** – ``SimParams`` built from the sidebar widgets.
         * **model** – OpenAI model name entered by the user.
         * **api_season** – Season year selected for API data fetching.
+        * **history_seasons** – Number of historical seasons used as priors.
     """
     st.sidebar.header("Motor")
     simulations = st.sidebar.slider("Simulaciones", 500, 50000, 4000, step=500)
@@ -603,7 +636,20 @@ def render_scenario_view(
     calendar: pd.DataFrame,
     params: SimParams,
 ) -> None:
-    """Render conservative/base/aggressive championship scenarios."""
+    """Render conservative/base/aggressive championship scenario comparison.
+
+    Parameters
+    ----------
+    driver_results : pd.DataFrame or None
+        Driver championship summary from the main simulation, or ``None``
+        if the simulation has not been run yet.
+    drivers : pd.DataFrame
+        Cleaned driver seed table.
+    calendar : pd.DataFrame
+        Cleaned calendar table.
+    params : SimParams
+        Current simulation parameters used to derive scenario variants.
+    """
     st.subheader("Escenarios")
     if driver_results is None:
         st.info("Primero corre la simulacion.")
@@ -652,7 +698,20 @@ def render_diagnostic_view(
     calendar: pd.DataFrame,
     params: SimParams,
 ) -> None:
-    """Render deterministic model diagnostics for the simulated result."""
+    """Render deterministic model diagnostics for the simulated championship.
+
+    Parameters
+    ----------
+    driver_results : pd.DataFrame or None
+        Driver championship summary from the main simulation, or ``None``
+        if the simulation has not been run yet.
+    drivers : pd.DataFrame
+        Cleaned driver seed table with current ratings.
+    calendar : pd.DataFrame
+        Cleaned calendar table used to derive circuit-fit metrics.
+    params : SimParams
+        Current simulation parameters used for the diagnostics calculation.
+    """
     st.subheader("Diagnostico")
     if driver_results is None:
         st.info("Primero corre la simulacion.")

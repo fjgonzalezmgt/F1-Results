@@ -63,7 +63,26 @@ def _combine_strength(
     params: SimParams,
     form_scale: float = 1.0,
 ) -> float | np.ndarray:
-    """Blend driver, constructor and decayed-form components."""
+    """Blend driver, constructor and decayed-form components.
+
+    Parameters
+    ----------
+    driver_component : float or np.ndarray
+        Weighted driver-skill component derived from driver ratings.
+    constructor_component : float or np.ndarray
+        Weighted constructor-pace component derived from team ratings.
+    recent_form : float or np.ndarray
+        Recent-form score for the driver.
+    params : SimParams
+        Simulation parameters controlling the relative weights.
+    form_scale : float, optional
+        Decay multiplier applied to the form weight. Default is 1.0.
+
+    Returns
+    -------
+    float or np.ndarray
+        Normalised weighted blend of the three components.
+    """
     effective_form_weight = max(0.0, params.form_weight) * max(0.0, float(form_scale))
     total = max(0.01, params.driver_weight + params.constructor_weight + effective_form_weight)
     return (
@@ -74,13 +93,40 @@ def _combine_strength(
 
 
 def _form_scale_for_race(race_index: int, params: SimParams) -> float:
-    """Return the recent-form multiplier for a future race index."""
+    """Return the recent-form decay multiplier for a future race index.
+
+    Parameters
+    ----------
+    race_index : int
+        Zero-based index of the upcoming race within the remaining calendar.
+    params : SimParams
+        Simulation parameters; uses ``form_decay_races`` as the decay constant.
+
+    Returns
+    -------
+    float
+        Exponential decay factor in (0, 1]: 1.0 at race_index 0, approaching
+        0 for large indices relative to ``params.form_decay_races``.
+    """
     decay = max(0.05, float(params.form_decay_races))
     return float(np.exp(-max(0, race_index) / decay))
 
 
 def _package_uncertainty_scale(calendar: pd.DataFrame, params: SimParams) -> float:
-    """Scale team-package uncertainty down as completed evidence accumulates."""
+    """Scale team-package uncertainty down as completed evidence accumulates.
+
+    Parameters
+    ----------
+    calendar : pd.DataFrame
+        Cleaned calendar table with ``completed`` and ``round`` columns.
+    params : SimParams
+        Simulation parameters; uses ``start_round`` and ``team_uncertainty``.
+
+    Returns
+    -------
+    float
+        Per-team uncertainty standard deviation for a single simulation pass.
+    """
     completed_before_start = calendar.loc[
         (calendar["completed"] == 1) & (calendar["round"] < params.start_round),
         "round",
@@ -89,7 +135,23 @@ def _package_uncertainty_scale(calendar: pd.DataFrame, params: SimParams) -> flo
 
 
 def _season_evidence_confidence(calendar: pd.DataFrame, params: SimParams, prior_rounds: float = 8.0) -> float:
-    """Return how much to trust current-season derived ratings."""
+    """Return a confidence factor reflecting how much to trust current-season ratings.
+
+    Parameters
+    ----------
+    calendar : pd.DataFrame
+        Cleaned calendar table with ``completed`` and ``round`` columns.
+    params : SimParams
+        Simulation parameters; uses ``start_round`` to identify completed rounds.
+    prior_rounds : float, optional
+        Pseudo-count of rounds assumed before the season starts. Default is 8.0.
+
+    Returns
+    -------
+    float
+        Confidence weight in [0, 1): low when few rounds are complete,
+        approaching 1 as completed evidence grows.
+    """
     completed_before_start = calendar.loc[
         (calendar["completed"] == 1) & (calendar["round"] < params.start_round),
         "round",
@@ -103,7 +165,26 @@ def _regress_to_mean(
     confidence: float,
     floor_factor: float,
 ) -> float | np.ndarray:
-    """Shrink values toward a center when current-season evidence is thin."""
+    """Shrink values toward a center when current-season evidence is thin.
+
+    Parameters
+    ----------
+    values : float or np.ndarray
+        Raw metric values to shrink.
+    center : float
+        Target center value to shrink toward.
+    confidence : float
+        Evidence-based weight in [0, 1]; 0 returns ``center``, 1 returns
+        unmodified ``values``.
+    floor_factor : float
+        Minimum multiplier applied even when ``confidence`` is 0, preventing
+        full collapse to the center.
+
+    Returns
+    -------
+    float or np.ndarray
+        Values partially shrunk toward ``center`` according to confidence.
+    """
     confidence = max(0.0, min(1.0, float(confidence)))
     factor = max(0.0, min(1.0, float(floor_factor) + (1.0 - float(floor_factor)) * confidence))
     return center + (values - center) * factor
@@ -612,6 +693,26 @@ def build_driver_diagnostics(
     inputs that shape the Monte Carlo instead of trying to replay every random
     draw.  It is useful for spotting overconfident seeds, dominant team ratings
     and circuits that flatter one package.
+
+    Parameters
+    ----------
+    driver_results : pd.DataFrame
+        Driver championship summary returned by ``simulate_many``.
+    drivers : pd.DataFrame
+        Cleaned driver seed table with current ratings.
+    calendar : pd.DataFrame
+        Cleaned calendar table used to compute remaining-race metrics.
+    params : SimParams
+        Simulation parameters for regression and form-decay calculations.
+    limit : int, optional
+        Maximum number of drivers to include in the output. Default is 12.
+
+    Returns
+    -------
+    pd.DataFrame
+        Diagnostic table with columns for driver, team, current points,
+        expected future points, champion probability, driver/constructor
+        components, form, circuit fit and noise estimates.
     """
     clean_dr = clean_drivers(drivers)
     clean_cal = clean_calendar(calendar)
