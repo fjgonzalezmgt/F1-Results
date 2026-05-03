@@ -301,7 +301,7 @@ def render_sidebar(calendar: pd.DataFrame) -> tuple[SimParams, str, int, int]:
     """
     st.sidebar.header("Motor")
     simulations = st.sidebar.slider("Simulaciones", 500, 50000, 4000, step=500)
-    seed = st.sidebar.number_input("Semilla", min_value=1, value=2026, step=1)
+    seed = st.sidebar.number_input("Semilla", min_value=1, value=DEFAULT_SEASON, step=1)
     open_rounds = calendar.loc[calendar["completed"] == 0, "round"].tolist()
     default_round = int(open_rounds[0]) if open_rounds else int(calendar["round"].max())
     start_round = st.sidebar.selectbox(

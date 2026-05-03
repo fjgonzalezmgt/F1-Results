@@ -9,6 +9,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from f1predictor.config import DEFAULT_SEASON
+
 
 @dataclass(frozen=True)
 class SimParams:
@@ -59,7 +61,7 @@ class SimParams:
     """
 
     simulations: int = 4000
-    seed: int = 2026
+    seed: int = DEFAULT_SEASON
     start_round: int = 4
     include_sprints: bool = True
     driver_weight: float = 0.42

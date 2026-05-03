@@ -8,6 +8,7 @@ f1predictor modules here to avoid circular dependencies.
 
 from __future__ import annotations
 
+from datetime import date
 from pathlib import Path
 
 
@@ -18,21 +19,22 @@ DRIVERS_PATH = DATA_DIR / "drivers_seed.csv"
 CALENDAR_PATH = DATA_DIR / "calendar_seed.csv"
 
 APP_TITLE = "F1 Championship Lab"
+
+DEFAULT_SEASON: int = date.today().year
+
 APP_CAPTION = (
-    "Monte Carlo para simular el campeonato F1 2026 con pilotos, constructores, "
+    f"Monte Carlo para simular el campeonato F1 {DEFAULT_SEASON} con pilotos, constructores, "
     "clima, fiabilidad, safety car y contexto LLM."
 )
 
 F1_DRIVERS_URL = "https://www.formula1.com/en/drivers"
-F1_STANDINGS_URL = "https://www.formula1.com/en/results/2026/drivers"
-F1_CALENDAR_URL = "https://www.formula1.com/en/racing/2026"
+F1_STANDINGS_URL = f"https://www.formula1.com/en/results/{DEFAULT_SEASON}/drivers"
+F1_CALENDAR_URL = f"https://www.formula1.com/en/racing/{DEFAULT_SEASON}"
 FASTF1_URL = "https://docs.fastf1.dev/"
 OPENF1_URL = "https://openf1.org/docs/"
 OPENAI_WEB_SEARCH_URL = "https://platform.openai.com/docs/guides/tools-web-search?api-mode=responses"
 JOLPICA_BASE_URL = "https://api.jolpi.ca"
 OPENF1_BASE_URL = "https://api.openf1.org/v1"
-
-DEFAULT_SEASON = 2026
 
 RACE_POINTS = [25, 18, 15, 12, 10, 8, 6, 4, 2, 1]
 SPRINT_POINTS = [8, 7, 6, 5, 4, 3, 2, 1]

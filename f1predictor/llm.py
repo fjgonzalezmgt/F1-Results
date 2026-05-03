@@ -199,14 +199,14 @@ def call_llm_formula1_official_update(
                 "grand_prix": "Miami GP",
                 "country": "USA",
                 "circuit": "Miami International Autodrome",
-                "race_date": "2026-05-03",
+                "race_date": f"{season}-05-03",
                 "sprint_remaining": 0,
                 "completed": 0,
             }
         ],
         "sources": [
-            "https://www.formula1.com/en/results/2026/drivers",
-            "https://www.formula1.com/en/racing/2026",
+            f"https://www.formula1.com/en/results/{season}/drivers",
+            f"https://www.formula1.com/en/racing/{season}",
         ],
     }
     prompt = (
