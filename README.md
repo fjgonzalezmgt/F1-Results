@@ -6,6 +6,7 @@
 ![Streamlit](https://img.shields.io/badge/Streamlit-1.x-FF4B4B?logo=streamlit&logoColor=white)
 ![NumPy](https://img.shields.io/badge/NumPy-vectorised-013243?logo=numpy&logoColor=white)
 ![Pandas](https://img.shields.io/badge/Pandas-2.x-150458?logo=pandas&logoColor=white)
+![SciPy](https://img.shields.io/badge/SciPy-1.12%2B-8CAAE6?logo=scipy&logoColor=white)
 ![Plotly](https://img.shields.io/badge/Plotly-interactive-3F4F75?logo=plotly&logoColor=white)
 ![OpenAI](https://img.shields.io/badge/OpenAI-web__search-412991?logo=openai&logoColor=white)
 ![Conda](https://img.shields.io/badge/Conda-environment-44A833?logo=anaconda&logoColor=white)
@@ -44,6 +45,7 @@ Aplicacion Streamlit para simular el campeonato de Formula 1 2026 combinando un 
 | **Formula1.com via LLM** | El boton *Actualizar F1.com con LLM* usa `web_search` de OpenAI restringido a Formula1.com para line-up, standings y calendario oficial. |
 | **LLM de contexto** | Busca noticias del proximo GP (clima, parrilla, upgrades, sanciones) y genera un veredicto narrativo sobre pilotos, constructores y escenarios. |
 | **Datos editables y persistentes** | Pilotos y calendario viven en CSV editables desde la app; cualquier actualizacion los sobreescribe en disco. |
+| **Reporte PDF** | El boton *Guardar reporte* exporta un informe LaTeX/PDF con graficos Plotly, tabla de resultados Monte Carlo y el analisis LLM persistido; guarda ademas un Excel con todas las hojas de resultados. Requiere `pdflatex` en el PATH. |
 
 ---
 
@@ -70,6 +72,7 @@ graph TD
         PUBAPI[public_apis.py\nIngesta y calibracion]
         SIM[simulator.py\nMonte Carlo vectorizado]
         LLM[llm.py\nOpenAI Responses API]
+        REPORT[report.py\nLaTeX · PDF · Excel]
         UI[ui.py\nStreamlit widgets y cache]
     end
 
@@ -87,7 +90,9 @@ graph TD
     PARAMS --> SIM
     SIM -->|driver_df / constructor_df / race_df| UI
     LLM -->|analisis narrativo| UI
-    CONFIG -.->|constantes| DATA & PUBAPI & SIM & LLM & UI
+    SIM & LLM -->|resultados + analisis| REPORT
+    REPORT -->|PDF · xlsx| UI
+    CONFIG -.->|constantes| DATA & PUBAPI & SIM & LLM & REPORT & UI
     UI --> STREAMLIT
 ```
 
@@ -175,7 +180,7 @@ Crea un archivo `.env` en la raiz del proyecto:
 
 ```dotenv
 OPENAI_API_KEY=tu_clave_aqui
-OPENAI_MODEL=gpt-5.5
+OPENAI_MODEL=gpt-4o
 ```
 
 > Sin `OPENAI_API_KEY` la app funciona completamente; los botones LLM quedan deshabilitados.
@@ -248,6 +253,17 @@ F1 Results/
 ├── docs/
 │   └── research_f1_models.md # Sintesis de modelos e investigacion
 │
+├── resultados/
+│   ├── analisis_llm.md       # Ultimo analisis LLM persistido
+│   └── resultados_montecarlo.xlsx  # Ultimo Excel de resultados
+│
+├── reporte/
+│   ├── reporte_f1_template.tex  # Plantilla LaTeX del informe
+│   ├── reporte_f1.tex           # TeX renderizado (generado)
+│   └── reporte_f1.pdf           # PDF compilado (generado)
+│
+├── figs/                     # Graficos Plotly exportados para el reporte
+│
 └── f1predictor/
     ├── __init__.py
     ├── config.py             # Constantes: paths, URLs, puntos, colores
@@ -256,6 +272,7 @@ F1 Results/
     ├── public_apis.py        # Ingesta Jolpica-F1 + OpenF1, calibracion de ratings
     ├── simulator.py          # Motor Monte Carlo vectorizado con NumPy
     ├── llm.py                # Integracion OpenAI Responses API (web_search + analisis)
+    ├── report.py             # Generacion LaTeX/PDF y exportacion Excel de resultados
     └── ui.py                 # Streamlit: sidebar, editores, graficos, LLM panel
 ```
 
