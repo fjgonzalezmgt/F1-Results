@@ -5,52 +5,112 @@
 \usepackage[spanish]{babel}
 \usepackage{geometry}
 \usepackage{booktabs}
+\usepackage[font=small,labelfont=bf,skip=6pt]{caption}
+\usepackage{float}
 \usepackage{graphicx}
 \usepackage{longtable}
 \usepackage{array}
-\usepackage{xcolor}
+\usepackage[table]{xcolor}
+\usepackage{fancyhdr}
 \usepackage{hyperref}
 
-\geometry{margin=1in}
-\hypersetup{colorlinks=true,linkcolor=black,urlcolor=blue}
+\geometry{top=0.82in,bottom=0.9in,left=0.78in,right=0.78in}
+\hypersetup{colorlinks=true,linkcolor=GIACyan,urlcolor=GIAMagenta}
 \setlength{\parindent}{0pt}
-\setlength{\parskip}{0.55em}
+\setlength{\parskip}{0.45em}
+\renewcommand{\arraystretch}{1.13}
+\renewcommand{\familydefault}{\sfdefault}
 
-\title{\textbf{__REPORT_TITLE__}}
-\author{F1 Championship Lab}
-\date{Generado: __GENERATED_AT__}
+\definecolor{GIADark}{HTML}{080B16}
+\definecolor{GIANavy}{HTML}{111827}
+\definecolor{GIACyan}{HTML}{00D9FF}
+\definecolor{GIAMagenta}{HTML}{FF2E88}
+\definecolor{GIAGreen}{HTML}{21E6A8}
+\definecolor{GIASoft}{HTML}{F4F7FB}
+\definecolor{GIAText}{HTML}{202734}
+\definecolor{GIALine}{HTML}{D9E2EC}
+
+\pagestyle{fancy}
+\fancyhf{}
+\lhead{\textcolor{GIACyan}{\small __BRAND_NAME__}}
+\rhead{\textcolor{GIAText}{\small F1 Monte Carlo Report}}
+\cfoot{\textcolor{GIAText}{\small \thepage}}
+\renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\headrule}{\hbox to\headwidth{\color{GIACyan}\leaders\hrule height \headrulewidth\hfill}}
+
+\newcommand{\GIASection}[1]{%
+  \vspace{0.8em}
+  {\Large\bfseries\color{GIADark} #1}\\[-0.1em]
+  {\color{GIAMagenta}\rule{0.16\linewidth}{1.8pt}\color{GIACyan}\rule{0.84\linewidth}{1.8pt}}
+  \vspace{0.45em}
+}
+
+\newcommand{\GIACallout}[1]{%
+  \colorbox{GIASoft}{%
+    \begin{minipage}{0.96\linewidth}
+    \vspace{0.45em}
+    #1
+    \vspace{0.45em}
+    \end{minipage}
+  }
+}
 
 \begin{document}
-\maketitle
 
-\section*{Resumen ejecutivo}
-\textbf{Proximo GP analizado:} __NEXT_GP__
+\begin{titlepage}
+\pagecolor{GIADark}
+\color{white}
+\vspace*{0.7in}
+{\Huge\bfseries __BRAND_NAME__\par}
+\vspace{0.25em}
+{\color{GIACyan}\rule{0.72\linewidth}{3pt}}
+{\color{GIAMagenta}\rule{0.20\linewidth}{3pt}\par}
+\vspace{1.0in}
+{\fontsize{34}{38}\selectfont\bfseries __REPORT_TITLE__\par}
+\vspace{0.35em}
+{\LARGE\color{GIACyan} __REPORT_SUBTITLE__\par}
+\vspace{0.9in}
+\GIACallout{%
+\color{GIAText}
+\textbf{Proximo GP analizado:} __NEXT_GP__\\
+\textbf{Generado:} __GENERATED_AT__\\
+\textbf{Sitio:} \href{https://__BRAND_URL__}{__BRAND_URL__}
+}
+\vfill
+{\large Memorias, hobbies, juegos y datos puestos a competir en la misma parrilla.\par}
+\end{titlepage}
+\nopagecolor
+\color{GIAText}
 
+\GIASection{Resumen ejecutivo}
 __SIMULATION_SUMMARY__
 
-\section*{Campeonato de pilotos}
+\GIASection{Campeonato de pilotos}
 __DRIVER_CHART__
 
+\vspace{-0.4em}
 __DRIVER_TABLE__
 
-\section*{Campeonato de constructores}
+\GIASection{Campeonato de constructores}
 __CONSTRUCTOR_CHART__
 
+\vspace{-0.4em}
 __CONSTRUCTOR_TABLE__
 
-\section*{Proximo Gran Premio}
+\GIASection{Proximo Gran Premio}
 __NEXT_RACE_CHART__
 
+\vspace{-0.4em}
 __NEXT_RACE_TABLE__
 
-\section*{Parametros de simulacion}
+\GIASection{Parametros de simulacion}
 __PARAMETER_TABLE__
 
-\section*{Notas de datos}
+\GIASection{Notas de datos}
 __DATA_NOTES__
 
 \newpage
-\section*{Analisis LLM}
+\GIASection{Analisis LLM}
 __LLM_ANALYSIS__
 
 \end{document}

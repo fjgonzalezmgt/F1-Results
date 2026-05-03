@@ -109,7 +109,10 @@ def render_report(
     figures = save_report_figures(driver_results, constructor_results, next_race_winners)
 
     replacements = {
-        "__REPORT_TITLE__": _latex_escape("Reporte F1 Championship Lab"),
+        "__REPORT_TITLE__": _latex_escape("F1 Championship Lab"),
+        "__REPORT_SUBTITLE__": _latex_escape("Monte Carlo, contexto LLM y lectura editorial"),
+        "__BRAND_NAME__": _latex_escape("Gamer Insight Analytics"),
+        "__BRAND_URL__": _latex_escape("gamerinsightanalytics.com"),
         "__GENERATED_AT__": _latex_escape(datetime.now().strftime("%Y-%m-%d %H:%M")),
         "__NEXT_GP__": _latex_escape(f"R{next_round} - {next_race['grand_prix']}"),
         "__SIMULATION_SUMMARY__": _simulation_summary(driver_results, constructor_results, next_race_winners, params),
@@ -311,27 +314,52 @@ def _save_bar_chart(
         ) from exc
 
     _configure_kaleido_browser()
+    chart_df = df.copy()
+    chart_df[y] = chart_df[y].astype(str)
+    left_margin = _chart_left_margin(chart_df[y])
+    chart_height = max(520, 48 * len(chart_df) + 170)
     fig = px.bar(
-        df,
+        chart_df,
         x=x,
         y=y,
         color=color if color in df.columns else None,
         orientation="h",
-        text=df[x].map(lambda value: f"{value:.1f}%"),
+        text=chart_df[x].map(lambda value: f"{value:.1f}%"),
         title=title,
         labels=labels,
         color_discrete_map=TEAM_COLORS,
     )
     fig.update_layout(
-        width=1100,
-        height=650,
-        margin=dict(l=20, r=40, t=70, b=40),
+        width=1400,
+        height=chart_height,
+        margin=dict(l=left_margin, r=130, t=95, b=95),
         paper_bgcolor="white",
         plot_bgcolor="white",
-        font=dict(size=18),
+        font=dict(family="Arial", size=22, color="#24292f"),
+        title=dict(x=0.5, xanchor="center", font=dict(size=28)),
         showlegend=False,
+        bargap=0.26,
     )
-    fig.update_traces(textposition="outside", cliponaxis=False)
+    fig.update_xaxes(
+        showgrid=True,
+        gridcolor="#eaeef2",
+        zeroline=False,
+        ticks="outside",
+        title_font=dict(size=20),
+        tickfont=dict(size=18),
+    )
+    fig.update_yaxes(
+        automargin=True,
+        title_standoff=18,
+        title_font=dict(size=20),
+        tickfont=dict(size=18),
+    )
+    fig.update_traces(
+        textposition="outside",
+        cliponaxis=False,
+        textfont=dict(size=18, color="#24292f"),
+        marker_line_width=0,
+    )
     try:
         fig.write_image(path, scale=2)
     except Exception as exc:
@@ -339,6 +367,11 @@ def _save_bar_chart(
             "No se pudieron exportar los graficos PNG. Revisa que `python-kaleido` "
             "este instalado por Conda y que Chrome este disponible para Kaleido."
         ) from exc
+
+
+def _chart_left_margin(labels: pd.Series) -> int:
+    longest = max((len(str(value)) for value in labels), default=12)
+    return min(380, max(230, longest * 12 + 70))
 
 
 def _configure_kaleido_browser() -> None:
@@ -359,9 +392,9 @@ def _figure_latex(path: Path, caption: str) -> str:
     relative = Path("..") / path.relative_to(path.parents[1])
     return "\n".join(
         [
-            r"\begin{figure}[htbp]",
+            r"\begin{figure}[H]",
             r"\centering",
-            fr"\includegraphics[width=0.95\textwidth]{{{relative.as_posix()}}}",
+            fr"\includegraphics[width=\linewidth]{{{relative.as_posix()}}}",
             fr"\caption{{{_latex_escape(caption)}}}",
             r"\end{figure}",
         ]
@@ -375,21 +408,34 @@ def _table_to_latex(df: pd.DataFrame, columns: list[str], headers: list[str]) ->
         return r"\emph{Sin datos disponibles.}"
 
     alignment = "l" * len(available)
-    lines = [fr"\begin{{longtable}}{{{alignment}}}", r"\toprule"]
-    lines.append(" & ".join(_latex_escape(header_map[column]) for column in available) + r" \\")
-    lines.extend([r"\midrule", r"\endhead"])
+    lines = [
+        r"\small",
+        r"\rowcolors{2}{GIASoft}{white}",
+        fr"\begin{{longtable}}{{@{{}}{alignment}@{{}}}}",
+        r"\rowcolor{GIADark}",
+    ]
+    lines.append(
+        " & ".join(r"\textcolor{white}{\textbf{" + _latex_escape(header_map[column]) + "}}" for column in available)
+        + r" \\"
+    )
+    lines.extend([r"\endhead"])
     for _, row in df[available].iterrows():
         values = [_format_cell(row[column]) for column in available]
         lines.append(" & ".join(values) + r" \\")
-    lines.extend([r"\bottomrule", r"\end{longtable}"])
+    lines.extend([r"\end{longtable}", r"\rowcolors{2}{}{}", r"\normalsize"])
     return "\n".join(lines)
 
 
 def _key_value_table(rows: list[tuple[str, str]]) -> str:
-    lines = [r"\begin{tabular}{ll}", r"\toprule", r"Campo & Valor \\", r"\midrule"]
+    lines = [
+        r"\begin{center}",
+        r"\rowcolors{2}{GIASoft}{white}",
+        r"\begin{tabular}{@{}p{0.34\linewidth}p{0.46\linewidth}@{}}",
+        r"\rowcolor{GIADark}\textcolor{white}{\textbf{Campo}} & \textcolor{white}{\textbf{Valor}} \\",
+    ]
     for key, value in rows:
         lines.append(f"{_latex_escape(key)} & {_latex_escape(value)}" + r" \\")
-    lines.extend([r"\bottomrule", r"\end{tabular}"])
+    lines.extend([r"\end{tabular}", r"\rowcolors{2}{}{}", r"\end{center}"])
     return "\n".join(lines)
 
 
