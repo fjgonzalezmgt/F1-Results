@@ -8,7 +8,6 @@ narrative-analysis panel.
 
 from __future__ import annotations
 
-from dataclasses import replace
 import html
 import json
 
@@ -56,7 +55,7 @@ from f1predictor.llm import (
 )
 from f1predictor.parameters import SimParams
 from f1predictor.public_apis import refresh_model_inputs_from_public_apis
-from f1predictor.report import persist_llm_analysis, persist_montecarlo_results, render_report
+from f1predictor.report import latest_llm_analysis, latest_montecarlo_results, persist_llm_analysis, persist_montecarlo_results, render_report
 from f1predictor.simulator import build_driver_diagnostics, describe_driver, simulate_many
 
 
@@ -196,96 +195,6 @@ def run_simulation_cached(
     calendar = clean_calendar(dataframe_from_csv_text(calendar_csv))
     return simulate_many(drivers, calendar, params)
 
-
-def build_scenario_params(params: SimParams) -> dict[str, SimParams]:
-    """Create conservative, base and aggressive scenario parameter sets.
-
-    Parameters
-    ----------
-    params : SimParams
-        Base simulation parameters from which scenarios are derived.
-
-    Returns
-    -------
-    dict[str, SimParams]
-        Dictionary mapping scenario names (``"Conservador"``, ``"Base"``,
-        ``"Agresivo"``) to their corresponding ``SimParams`` instances.
-    """
-    scenario_simulations = min(params.simulations, 8000)
-    return {
-        "Conservador": replace(
-            params,
-            simulations=scenario_simulations,
-            seed=params.seed + 101,
-            form_weight=min(params.form_weight, 0.04),
-            form_decay_races=min(params.form_decay_races, 2.0),
-            qualifying_weight=max(0.20, params.qualifying_weight * 0.85),
-            chaos=min(14.0, params.chaos + 2.0),
-            development_drift=min(8.0, params.development_drift + 1.0),
-            team_uncertainty=min(10.0, params.team_uncertainty + 1.5),
-        ),
-        "Base": replace(params, simulations=scenario_simulations),
-        "Agresivo": replace(
-            params,
-            simulations=scenario_simulations,
-            seed=params.seed + 202,
-            form_weight=min(0.18, max(params.form_weight * 1.7, 0.08)),
-            form_decay_races=min(6.0, max(params.form_decay_races * 1.35, 3.0)),
-            qualifying_weight=min(1.20, params.qualifying_weight * 1.10),
-            chaos=max(1.0, params.chaos - 1.0),
-            development_drift=max(0.0, params.development_drift * 0.8),
-            team_uncertainty=max(0.0, params.team_uncertainty * 0.65),
-        ),
-    }
-
-
-@st.cache_data(show_spinner="Calculando escenarios...")
-def run_scenarios_cached(
-    drivers_csv: str,
-    calendar_csv: str,
-    params: SimParams,
-) -> pd.DataFrame:
-    """Run compact scenario simulations and return top driver rows.
-
-    Accepts CSV strings rather than DataFrames so that Streamlit can hash
-    the inputs for cache invalidation.
-
-    Parameters
-    ----------
-    drivers_csv : str
-        CSV serialisation of the driver table.
-    calendar_csv : str
-        CSV serialisation of the calendar table.
-    params : SimParams
-        Base simulation parameters; scenario variants are derived internally.
-
-    Returns
-    -------
-    pd.DataFrame
-        Long-format DataFrame with columns ``escenario``, ``rank``,
-        ``driver``, ``team``, ``expected_points``, ``avg_final_rank``,
-        ``champion_pct``, ``top3_pct`` and ``simulations``.
-    """
-    drivers = clean_drivers(dataframe_from_csv_text(drivers_csv))
-    calendar = clean_calendar(dataframe_from_csv_text(calendar_csv))
-    rows: list[dict[str, object]] = []
-    for scenario, scenario_params in build_scenario_params(params).items():
-        driver_results, _constructor_results, _race_winners = simulate_many(drivers, calendar, scenario_params)
-        for rank, item in enumerate(driver_results.head(8).to_dict(orient="records"), start=1):
-            rows.append(
-                {
-                    "escenario": scenario,
-                    "rank": rank,
-                    "driver": item["driver"],
-                    "team": item["team"],
-                    "expected_points": item["expected_points"],
-                    "avg_final_rank": item["avg_final_rank"],
-                    "champion_pct": item["champion_pct"],
-                    "top3_pct": item["top3_pct"],
-                    "simulations": scenario_params.simulations,
-                }
-            )
-    return pd.DataFrame(rows)
 
 
 def render_sidebar(calendar: pd.DataFrame) -> tuple[SimParams, str, int, int]:
@@ -635,68 +544,6 @@ def render_race_view(race_winners: pd.DataFrame, calendar: pd.DataFrame, drivers
     c4.metric("Forma", profile["form"])
 
 
-def render_scenario_view(
-    driver_results: pd.DataFrame | None,
-    drivers: pd.DataFrame,
-    calendar: pd.DataFrame,
-    params: SimParams,
-) -> None:
-    """Render conservative/base/aggressive championship scenario comparison.
-
-    Parameters
-    ----------
-    driver_results : pd.DataFrame or None
-        Driver championship summary from the main simulation, or ``None``
-        if the simulation has not been run yet.
-    drivers : pd.DataFrame
-        Cleaned driver seed table.
-    calendar : pd.DataFrame
-        Cleaned calendar table.
-    params : SimParams
-        Current simulation parameters used to derive scenario variants.
-    """
-    st.subheader("Escenarios")
-    if driver_results is None:
-        st.info("Primero corre la simulacion.")
-        return
-
-    drivers_csv = dataframe_to_csv_text(drivers)
-    calendar_csv = dataframe_to_csv_text(calendar)
-    scenario_key = f"{hash(drivers_csv)}:{hash(calendar_csv)}:{hash(params)}"
-    if st.button("Calcular escenarios"):
-        st.session_state["scenario_results"] = run_scenarios_cached(drivers_csv, calendar_csv, params)
-        st.session_state["scenario_key"] = scenario_key
-
-    scenario_results = st.session_state.get("scenario_results")
-    if scenario_results is None or st.session_state.get("scenario_key") != scenario_key:
-        st.caption("Conservador reduce forma y parrilla, sube incertidumbre; agresivo hace lo contrario.")
-        return
-
-    leaders = scenario_results.loc[scenario_results["rank"] == 1].copy()
-    c1, c2, c3 = st.columns(3)
-    for col, scenario in zip([c1, c2, c3], ["Conservador", "Base", "Agresivo"]):
-        row = leaders.loc[leaders["escenario"] == scenario].iloc[0]
-        col.metric(scenario, row["driver"], f"{row['champion_pct']:.1f}% campeon")
-
-    chart_data = scenario_results.sort_values(["escenario", "champion_pct"], ascending=[True, True])
-    fig = px.bar(
-        chart_data,
-        x="champion_pct",
-        y="driver",
-        color="team",
-        facet_col="escenario",
-        orientation="h",
-        text=chart_data["champion_pct"].map(lambda value: f"{value:.1f}%"),
-        labels={"champion_pct": "Probabilidad de campeonato", "driver": "Piloto"},
-        color_discrete_map=TEAM_COLORS,
-        category_orders={"escenario": ["Conservador", "Base", "Agresivo"]},
-    )
-    fig.update_layout(height=520, margin=dict(l=10, r=10, t=35, b=10))
-    fig.update_traces(textposition="outside", cliponaxis=False)
-    st.plotly_chart(fig, width="stretch")
-    st.dataframe(scenario_results.round(2), width="stretch", hide_index=True)
-
-
 def render_diagnostic_view(
     driver_results: pd.DataFrame | None,
     drivers: pd.DataFrame,
@@ -857,7 +704,6 @@ def render_llm_view(
         else:
             next_race_winners = race_winners.loc[race_winners["round"] == selected_round]
             diagnostics = build_driver_diagnostics(driver_results, drivers, calendar, params, limit=12)
-            scenarios = st.session_state.get("scenario_results")
             payload = build_analysis_payload(
                 driver_results,
                 constructor_results,
@@ -866,7 +712,6 @@ def render_llm_view(
                 calendar,
                 notes,
                 diagnostics=diagnostics,
-                scenarios=scenarios,
             )
             try:
                 with st.spinner("Consultando al LLM..."):
@@ -918,6 +763,20 @@ def render_app() -> None:
     """
     default_drivers = load_drivers_cached()
     default_calendar = load_calendar_cached()
+
+    # Load persisted data on first run of the session
+    if "simulation_results" not in st.session_state:
+        saved = latest_montecarlo_results()
+        if saved is not None:
+            dr, cr, rw, saved_drivers, saved_calendar = saved
+            st.session_state["simulation_results"] = (dr, cr, rw)
+            st.session_state["simulation_drivers"] = clean_drivers(saved_drivers)
+            st.session_state["simulation_calendar"] = clean_calendar(saved_calendar)
+    if "llm_answer" not in st.session_state:
+        analysis = latest_llm_analysis()
+        if analysis:
+            st.session_state["llm_answer"] = analysis
+
     params, llm_model, api_season, history_seasons = render_sidebar(default_calendar)
 
     st.title(APP_TITLE)
@@ -937,8 +796,6 @@ def render_app() -> None:
             st.session_state["simulation_drivers"] = drivers.copy()
             st.session_state["simulation_calendar"] = calendar.copy()
             st.session_state["simulation_params"] = params
-            st.session_state.pop("scenario_results", None)
-            st.session_state.pop("scenario_key", None)
             st.session_state.pop("llm_answer", None)
             st.session_state.pop("llm_analysis_path", None)
             st.success(f"Resultados Monte Carlo guardados en {MONTECARLO_RESULTS_PATH}.")
@@ -950,8 +807,8 @@ def render_app() -> None:
     sim_calendar = st.session_state.get("simulation_calendar", calendar)
     sim_params = st.session_state.get("simulation_params", params)
 
-    tab_drivers, tab_teams, tab_races, tab_scenarios, tab_diagnostics, tab_model, tab_llm = st.tabs(
-        ["Pilotos", "Constructores", "GP", "Escenarios", "Diagnostico", "Modelo", "LLM"]
+    tab_drivers, tab_teams, tab_races, tab_diagnostics, tab_model, tab_llm = st.tabs(
+        ["Pilotos", "Constructores", "GP", "Diagnostico", "Modelo", "LLM"]
     )
     if results is None:
         with tab_drivers:
@@ -960,8 +817,6 @@ def render_app() -> None:
             st.info("Pulsa **Simular campeonato** para ver constructores.")
         with tab_races:
             st.info("Pulsa **Simular campeonato** para ver carreras.")
-        with tab_scenarios:
-            render_scenario_view(None, sim_drivers, sim_calendar, sim_params)
         with tab_diagnostics:
             render_diagnostic_view(None, sim_drivers, sim_calendar, sim_params)
         driver_results = constructor_results = race_winners = None
@@ -973,8 +828,6 @@ def render_app() -> None:
             render_constructor_view(constructor_results)
         with tab_races:
             render_race_view(race_winners, sim_calendar, sim_drivers)
-        with tab_scenarios:
-            render_scenario_view(driver_results, sim_drivers, sim_calendar, sim_params)
         with tab_diagnostics:
             render_diagnostic_view(driver_results, sim_drivers, sim_calendar, sim_params)
 

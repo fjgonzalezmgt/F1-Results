@@ -22,3 +22,4 @@ reporte/reporte_f1.tex
 dist/
 build/
 *.egg-info/
+*.lnk

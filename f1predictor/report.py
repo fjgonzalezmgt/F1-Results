@@ -38,6 +38,31 @@ def latest_llm_analysis() -> str:
     return LLM_ANALYSIS_PATH.read_text(encoding="utf-8").strip()
 
 
+def latest_montecarlo_results() -> (
+    tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame] | None
+):
+    """Return the latest persisted Monte Carlo results, if they exist.
+
+    Returns
+    -------
+    tuple or None
+        ``(driver_results, constructor_results, race_winners, drivers, calendar)``
+        read from the saved Excel workbook, or ``None`` if no file exists or
+        reading fails.
+    """
+    if not MONTECARLO_RESULTS_PATH.exists():
+        return None
+    try:
+        driver_results = pd.read_excel(MONTECARLO_RESULTS_PATH, sheet_name="pilotos")
+        constructor_results = pd.read_excel(MONTECARLO_RESULTS_PATH, sheet_name="constructores")
+        race_winners = pd.read_excel(MONTECARLO_RESULTS_PATH, sheet_name="gp_probabilidades")
+        drivers = pd.read_excel(MONTECARLO_RESULTS_PATH, sheet_name="inputs_pilotos")
+        calendar = pd.read_excel(MONTECARLO_RESULTS_PATH, sheet_name="inputs_calendario")
+        return driver_results, constructor_results, race_winners, drivers, calendar
+    except Exception:
+        return None
+
+
 def persist_montecarlo_results(
     driver_results: pd.DataFrame,
     constructor_results: pd.DataFrame,
