@@ -1,0 +1,42 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.7.0/schema.json",
+  "name": "v020_ganador_gp",
+  "position": {
+    "x": 334,
+    "y": 84,
+    "z": 2,
+    "height": 110,
+    "width": 290,
+    "tabOrder": 2
+  },
+  "visual": {
+    "visualType": "card",
+    "query": {
+      "queryState": {
+        "Values": {
+          "projections": [
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "gp_probabilidades"
+                    }
+                  },
+                  "Property": "Ganador GP Mas Probable"
+                }
+              },
+              "queryRef": "gp_probabilidades.Ganador GP Mas Probable"
+            }
+          ]
+        }
+      }
+    }
+  },
+  "annotations": [
+    {
+      "name": "codex_bind",
+      "value": "Medida sugerida: gp_probabilidades[Ganador GP Mas Probable]"
+    }
+  ]
+}

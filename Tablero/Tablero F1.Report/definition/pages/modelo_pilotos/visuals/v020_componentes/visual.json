@@ -1,0 +1,422 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.8.0/schema.json",
+  "name": "v020_componentes",
+  "position": {
+    "x": 24.316109422492403,
+    "y": 405.59270516717328,
+    "z": 2,
+    "height": 264.55927051671733,
+    "width": 1231.3677811550153,
+    "tabOrder": 2
+  },
+  "visual": {
+    "visualType": "tableEx",
+    "query": {
+      "queryState": {
+        "Values": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "inputs_pilotos"
+                    }
+                  },
+                  "Property": "driver"
+                }
+              },
+              "queryRef": "inputs_pilotos.driver"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "inputs_pilotos"
+                    }
+                  },
+                  "Property": "team"
+                }
+              },
+              "queryRef": "inputs_pilotos.team"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "inputs_pilotos"
+                    }
+                  },
+                  "Property": "driver_rating"
+                }
+              },
+              "queryRef": "inputs_pilotos.driver_rating"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "inputs_pilotos"
+                    }
+                  },
+                  "Property": "qualifying"
+                }
+              },
+              "queryRef": "inputs_pilotos.qualifying"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "inputs_pilotos"
+                    }
+                  },
+                  "Property": "race_pace"
+                }
+              },
+              "queryRef": "inputs_pilotos.race_pace"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "inputs_pilotos"
+                    }
+                  },
+                  "Property": "consistency"
+                }
+              },
+              "queryRef": "inputs_pilotos.consistency"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "inputs_pilotos"
+                    }
+                  },
+                  "Property": "tyre_management"
+                }
+              },
+              "queryRef": "inputs_pilotos.tyre_management"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "inputs_pilotos"
+                    }
+                  },
+                  "Property": "wet_skill"
+                }
+              },
+              "queryRef": "inputs_pilotos.wet_skill"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "inputs_pilotos"
+                    }
+                  },
+                  "Property": "racecraft"
+                }
+              },
+              "queryRef": "inputs_pilotos.racecraft"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "inputs_pilotos"
+                    }
+                  },
+                  "Property": "team_pace"
+                }
+              },
+              "queryRef": "inputs_pilotos.team_pace"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "inputs_pilotos"
+                    }
+                  },
+                  "Property": "reliability"
+                }
+              },
+              "queryRef": "inputs_pilotos.reliability"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "inputs_pilotos"
+                    }
+                  },
+                  "Property": "recent_form"
+                }
+              },
+              "queryRef": "inputs_pilotos.recent_form"
+            }
+          ]
+        }
+      },
+      "sortDefinition": {
+        "sort": [
+          {
+            "field": {
+              "Column": {
+                "Expression": {
+                  "SourceRef": {
+                    "Entity": "inputs_pilotos"
+                  }
+                },
+                "Property": "driver_rating"
+              }
+            },
+            "direction": "Descending"
+          }
+        ]
+      }
+    },
+    "visualContainerObjects": {
+      "title": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            },
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Componentes del modelo'"
+                }
+              }
+            },
+            "fontColor": {
+              "solid": {}
+            }
+          }
+        }
+      ],
+      "subTitle": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            },
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Vista completa para comparar fortalezas: qualy, ritmo, consistencia, neumaticos, lluvia, racecraft, equipo y confiabilidad.'"
+                }
+              }
+            },
+            "fontColor": {
+              "solid": {}
+            }
+          }
+        }
+      ]
+    }
+  },
+  "filterConfig": {
+    "filters": [
+      {
+        "name": "ad457f86de132b94119c",
+        "field": {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "inputs_pilotos"
+              }
+            },
+            "Property": "driver"
+          }
+        },
+        "type": "Categorical"
+      },
+      {
+        "name": "546c6f8e70d19b95fd30",
+        "field": {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "inputs_pilotos"
+              }
+            },
+            "Property": "team"
+          }
+        },
+        "type": "Categorical"
+      },
+      {
+        "name": "18938f4498e773682a48",
+        "field": {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "inputs_pilotos"
+              }
+            },
+            "Property": "driver_rating"
+          }
+        },
+        "type": "Advanced"
+      },
+      {
+        "name": "d249f6df1e30dff3cf24",
+        "field": {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "inputs_pilotos"
+              }
+            },
+            "Property": "qualifying"
+          }
+        },
+        "type": "Advanced"
+      },
+      {
+        "name": "16d703fefbd2c2cc7ed8",
+        "field": {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "inputs_pilotos"
+              }
+            },
+            "Property": "race_pace"
+          }
+        },
+        "type": "Advanced"
+      },
+      {
+        "name": "0807205d5941697edcfe",
+        "field": {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "inputs_pilotos"
+              }
+            },
+            "Property": "consistency"
+          }
+        },
+        "type": "Advanced"
+      },
+      {
+        "name": "db15aaaeb67643a897de",
+        "field": {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "inputs_pilotos"
+              }
+            },
+            "Property": "tyre_management"
+          }
+        },
+        "type": "Advanced"
+      },
+      {
+        "name": "8639f2805f27bd9e2939",
+        "field": {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "inputs_pilotos"
+              }
+            },
+            "Property": "wet_skill"
+          }
+        },
+        "type": "Advanced"
+      },
+      {
+        "name": "a906f74f3ae515084e70",
+        "field": {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "inputs_pilotos"
+              }
+            },
+            "Property": "racecraft"
+          }
+        },
+        "type": "Advanced"
+      },
+      {
+        "name": "f86d91219324ac05bf24",
+        "field": {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "inputs_pilotos"
+              }
+            },
+            "Property": "team_pace"
+          }
+        },
+        "type": "Advanced"
+      },
+      {
+        "name": "71dcebe961d3b771fc97",
+        "field": {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "inputs_pilotos"
+              }
+            },
+            "Property": "reliability"
+          }
+        },
+        "type": "Advanced"
+      },
+      {
+        "name": "69f3b6932f86a9f346b9",
+        "field": {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "inputs_pilotos"
+              }
+            },
+            "Property": "recent_form"
+          }
+        },
+        "type": "Advanced"
+      }
+    ]
+  },
+  "annotations": [
+    {
+      "name": "codex_bind",
+      "value": "Tabla legible reemplazando grafico saturado. Filas: pilotos. Columnas: componentes del modelo."
+    }
+  ]
+}

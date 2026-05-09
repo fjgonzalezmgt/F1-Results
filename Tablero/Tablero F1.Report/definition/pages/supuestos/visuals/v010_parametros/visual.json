@@ -1,0 +1,68 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.7.0/schema.json",
+  "name": "v010_parametros",
+  "position": {
+    "x": 24,
+    "y": 84,
+    "z": 1,
+    "height": 130,
+    "width": 1232,
+    "tabOrder": 1
+  },
+  "visual": {
+    "visualType": "multiRowCard",
+    "query": {
+      "queryState": {
+        "Values": {
+          "projections": [
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "parametros"
+                    }
+                  },
+                  "Property": "Simulaciones"
+                }
+              },
+              "queryRef": "parametros.Simulaciones"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "parametros"
+                    }
+                  },
+                  "Property": "Semilla"
+                }
+              },
+              "queryRef": "parametros.Semilla"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "parametros"
+                    }
+                  },
+                  "Property": "Ronda Inicial"
+                }
+              },
+              "queryRef": "parametros.Ronda Inicial"
+            }
+          ]
+        }
+      }
+    }
+  },
+  "annotations": [
+    {
+      "name": "codex_bind",
+      "value": "Medidas: parametros[Simulaciones], parametros[Semilla], parametros[Ronda Inicial]."
+    }
+  ]
+}

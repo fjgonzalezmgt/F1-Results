@@ -1,0 +1,141 @@
+table pilotos
+	lineageTag: 591ce774-5177-4ac7-a5de-5726569b09f6
+
+	measure 'Puntos Actuales Pilotos' = SUM(pilotos[current_points])
+		formatString: 0
+		lineageTag: 88ac6029-005d-459c-8ce6-ef4bb9518884
+
+	measure 'Puntos Esperados Pilotos' = SUM(pilotos[expected_points])
+		formatString: 0.0
+		lineageTag: 12463fdf-1657-433a-a009-9627cff7f8bc
+
+	measure 'Puntos Proyectados Restantes' = [Puntos Esperados Pilotos] - [Puntos Actuales Pilotos]
+		formatString: 0.0
+		lineageTag: fbc023fb-31e8-4f13-9b51-abe3ad227c49
+
+	measure 'Ranking Promedio Pilotos' = AVERAGE(pilotos[avg_final_rank])
+		formatString: 0.00
+		lineageTag: 8d816847-42b4-4b7d-aa54-a78afa561b0f
+
+	measure 'Prob Campeon Pilotos' = DIVIDE(MAX(pilotos[champion_pct]), 100)
+		formatString: 0.0%
+		lineageTag: 1fc66aee-0ecf-4df9-aae0-7556be8be26f
+
+	measure 'Prob Top 3 Pilotos' = DIVIDE(MAX(pilotos[top3_pct]), 100)
+		formatString: 0.0%
+		lineageTag: 830beb4a-215c-4a42-8f4a-9a0d9d58518f
+
+	measure 'Prob Top 6 Pilotos' = DIVIDE(MAX(pilotos[top6_pct]), 100)
+		formatString: 0.0%
+		lineageTag: 3c01f9ac-b2c4-4610-b6b6-711d9d5a30ad
+
+	measure 'Piloto Campeon Mas Probable' =
+			VAR TopPiloto =
+				TOPN(1, ALL(pilotos), pilotos[champion_pct], DESC, pilotos[expected_points], DESC)
+			RETURN
+				CONCATENATEX(TopPiloto, pilotos[driver])
+		lineageTag: 35fc9ae9-28f1-4207-b8b9-3cb757a40b08
+
+	measure 'Equipo Del Campeon Mas Probable' =
+			VAR TopPiloto =
+				TOPN(1, ALL(pilotos), pilotos[champion_pct], DESC, pilotos[expected_points], DESC)
+			RETURN
+				CONCATENATEX(TopPiloto, pilotos[team])
+		lineageTag: f3773ec4-e36f-47f5-8aad-2cf85971e1a2
+
+	column driver
+		dataType: string
+		lineageTag: e1e31063-13cc-4316-8616-70cdd92e48c0
+		summarizeBy: none
+		sourceColumn: driver
+
+		annotation SummarizationSetBy = Automatic
+
+	column code
+		dataType: string
+		lineageTag: 3ba51e65-8fc2-46e1-b007-725c123282b0
+		summarizeBy: none
+		sourceColumn: code
+
+		annotation SummarizationSetBy = Automatic
+
+	column team
+		dataType: string
+		lineageTag: 1f34a9db-9652-4ba3-a858-326a43c5ce08
+		summarizeBy: none
+		sourceColumn: team
+
+		annotation SummarizationSetBy = Automatic
+
+	column current_points
+		dataType: int64
+		formatString: 0
+		lineageTag: 34de2859-d0b7-48ce-ac4a-bcb9da615113
+		summarizeBy: sum
+		sourceColumn: current_points
+
+		annotation SummarizationSetBy = Automatic
+
+	column expected_points
+		dataType: double
+		lineageTag: 7aae11f6-6cce-4ddd-95b3-5d669f854635
+		summarizeBy: sum
+		sourceColumn: expected_points
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column avg_final_rank
+		dataType: double
+		lineageTag: 5d2c3ebc-3926-4e35-87c4-ff1caaa61ba4
+		summarizeBy: sum
+		sourceColumn: avg_final_rank
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column champion_pct
+		dataType: double
+		lineageTag: 70ed4615-f64b-4c22-8220-b39a19eda83c
+		summarizeBy: sum
+		sourceColumn: champion_pct
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column top3_pct
+		dataType: double
+		lineageTag: 452247c0-da89-4cb5-825c-40de09707b5c
+		summarizeBy: sum
+		sourceColumn: top3_pct
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column top6_pct
+		dataType: double
+		lineageTag: 2e79a499-8119-45b7-a176-615a4ab8dcdc
+		summarizeBy: sum
+		sourceColumn: top6_pct
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	partition pilotos = m
+		mode: import
+		source =
+				let
+				    Source = Excel.Workbook(File.Contents("C:\Users\fjgon\OneDrive - Quality Analytics\QualityAnalytics\Newsletter\F1 Results\resultados\resultados_montecarlo.xlsx"), null, true),
+				    pilotos_Sheet = Source{[Item="pilotos",Kind="Sheet"]}[Data],
+				    #"Promoted Headers" = Table.PromoteHeaders(pilotos_Sheet, [PromoteAllScalars=true]),
+				    #"Changed Type" = Table.TransformColumnTypes(#"Promoted Headers",{{"driver", type text}, {"code", type text}, {"team", type text}, {"current_points", Int64.Type}, {"expected_points", type number}, {"avg_final_rank", type number}, {"champion_pct", type number}, {"top3_pct", type number}, {"top6_pct", type number}})
+				in
+				    #"Changed Type"
+
+	annotation PBI_ResultType = Table
+

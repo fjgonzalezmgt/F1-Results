@@ -1,0 +1,14 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/page/2.1.0/schema.json",
+  "name": "campeonato_pilotos",
+  "displayName": "Campeonato Pilotos",
+  "displayOption": "FitToPage",
+  "height": 720,
+  "width": 1280,
+  "annotations": [
+    {
+      "name": "codex_layout",
+      "value": "Seguimiento del titulo de pilotos: favorito al campeonato, puntos esperados, ranking promedio, probabilidad de campeon, top 3 y top 6."
+    }
+  ]
+}

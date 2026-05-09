@@ -1,0 +1,168 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.8.0/schema.json",
+  "name": "v020_ranking",
+  "position": {
+    "x": 24.316109422492403,
+    "y": 236.35258358662614,
+    "z": 2,
+    "height": 433.79939209726444,
+    "width": 649.726443768997,
+    "tabOrder": 2
+  },
+  "visual": {
+    "visualType": "tableEx",
+    "query": {
+      "queryState": {
+        "Values": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "constructores"
+                    }
+                  },
+                  "Property": "team"
+                }
+              },
+              "queryRef": "constructores.team"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "constructores"
+                    }
+                  },
+                  "Property": "current_points"
+                }
+              },
+              "queryRef": "constructores.current_points"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "constructores"
+                    }
+                  },
+                  "Property": "expected_points"
+                }
+              },
+              "queryRef": "constructores.expected_points"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "constructores"
+                    }
+                  },
+                  "Property": "avg_final_rank"
+                }
+              },
+              "queryRef": "constructores.avg_final_rank"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "constructores"
+                    }
+                  },
+                  "Property": "champion_pct"
+                }
+              },
+              "queryRef": "constructores.champion_pct"
+            }
+          ]
+        }
+      }
+    }
+  },
+  "filterConfig": {
+    "filters": [
+      {
+        "name": "5bb4495782710029f13e",
+        "field": {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "constructores"
+              }
+            },
+            "Property": "team"
+          }
+        },
+        "type": "Categorical"
+      },
+      {
+        "name": "38e3b080f3fa7e0de312",
+        "field": {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "constructores"
+              }
+            },
+            "Property": "current_points"
+          }
+        },
+        "type": "Advanced"
+      },
+      {
+        "name": "d2d771565b52435c7584",
+        "field": {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "constructores"
+              }
+            },
+            "Property": "expected_points"
+          }
+        },
+        "type": "Advanced"
+      },
+      {
+        "name": "67f4db97a3c9e58ba389",
+        "field": {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "constructores"
+              }
+            },
+            "Property": "avg_final_rank"
+          }
+        },
+        "type": "Advanced"
+      },
+      {
+        "name": "8995ff9006f446c0385c",
+        "field": {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "constructores"
+              }
+            },
+            "Property": "champion_pct"
+          }
+        },
+        "type": "Advanced"
+      }
+    ]
+  },
+  "annotations": [
+    {
+      "name": "codex_bind",
+      "value": "Campos: constructores[team], current_points, expected_points, avg_final_rank, champion_pct, top3_pct."
+    }
+  ]
+}

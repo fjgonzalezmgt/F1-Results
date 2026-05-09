@@ -1,0 +1,44 @@
+table parametros
+	lineageTag: 77289990-a9d9-4e11-bf3a-ab0bd072a15e
+
+	measure Simulaciones = VALUE(LOOKUPVALUE(parametros[valor], parametros[parametro], "simulations"))
+		formatString: 0
+		lineageTag: fa737806-4002-4ed8-9f44-8112bd9172bb
+
+	measure 'Ronda Inicial' = VALUE(LOOKUPVALUE(parametros[valor], parametros[parametro], "start_round"))
+		formatString: 0
+		lineageTag: 7c558c0a-5e82-4409-8a37-e4d2629629e6
+
+	measure Semilla = VALUE(LOOKUPVALUE(parametros[valor], parametros[parametro], "seed"))
+		formatString: 0
+		lineageTag: 1261190a-2011-4980-a904-81a6e25d9ee3
+
+	column parametro
+		dataType: string
+		lineageTag: 55fe8798-ed9d-474a-bbf8-6afabeff119a
+		summarizeBy: none
+		sourceColumn: parametro
+
+		annotation SummarizationSetBy = Automatic
+
+	column valor
+		dataType: string
+		lineageTag: 456118d4-bd0a-4461-b980-9c9a2fc54c9c
+		summarizeBy: none
+		sourceColumn: valor
+
+		annotation SummarizationSetBy = Automatic
+
+	partition parametros = m
+		mode: import
+		source =
+				let
+				    Source = Excel.Workbook(File.Contents("C:\Users\fjgon\OneDrive - Quality Analytics\QualityAnalytics\Newsletter\F1 Results\resultados\resultados_montecarlo.xlsx"), null, true),
+				    parametros_Sheet = Source{[Item="parametros",Kind="Sheet"]}[Data],
+				    #"Promoted Headers" = Table.PromoteHeaders(parametros_Sheet, [PromoteAllScalars=true]),
+				    #"Changed Type" = Table.TransformColumnTypes(#"Promoted Headers",{{"parametro", type text}, {"valor", type any}})
+				in
+				    #"Changed Type"
+
+	annotation PBI_ResultType = Table
+

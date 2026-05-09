@@ -1,0 +1,190 @@
+table inputs_calendario
+	lineageTag: 59b97bdd-48a0-4338-bdd4-69ca9a896ec7
+
+	measure 'Total Grandes Premios' = DISTINCTCOUNT(inputs_calendario[round])
+		formatString: 0
+		lineageTag: 881356b7-ee69-43f6-832a-b8b4d9695d66
+
+	measure 'Grandes Premios Completados' = CALCULATE(DISTINCTCOUNT(inputs_calendario[round]), inputs_calendario[completed] = 1)
+		formatString: 0
+		lineageTag: becbfc23-70b3-4460-8b3b-55b60c1367d0
+
+	measure 'Grandes Premios Pendientes' = CALCULATE(DISTINCTCOUNT(inputs_calendario[round]), inputs_calendario[completed] = 0)
+		formatString: 0
+		lineageTag: 9c5c13a9-9dfc-4326-9b0d-202d2a753047
+
+	measure 'Sprints Restantes' = SUM(inputs_calendario[sprint_remaining])
+		formatString: 0
+		lineageTag: f61862cc-8204-47e5-b08f-e25b24899d8d
+
+	measure 'Riesgo Clima Promedio' = AVERAGE(inputs_calendario[weather_risk])
+		formatString: 0.0
+		lineageTag: e899c6a0-e685-464a-a049-112e9bb78b1c
+
+	measure 'Riesgo Safety Car Promedio' = AVERAGE(inputs_calendario[safety_car_risk])
+		formatString: 0.0
+		lineageTag: 85171e07-91d3-4d8d-815c-807012a75f21
+
+	measure 'Proximo Gran Premio' =
+			VAR ProximaCarrera =
+				TOPN(
+					1,
+					FILTER(ALL(inputs_calendario), inputs_calendario[completed] = 0),
+					inputs_calendario[round], ASC
+				)
+			RETURN
+				CONCATENATEX(ProximaCarrera, inputs_calendario[grand_prix])
+		lineageTag: e2fa23ec-2e6d-4876-a11c-2c06befb9a59
+
+	column round
+		dataType: int64
+		formatString: 0
+		lineageTag: 90f2d58c-bc53-448a-bdd9-91a346ec9daa
+		summarizeBy: none
+		sourceColumn: round
+
+		annotation SummarizationSetBy = Automatic
+
+	column grand_prix
+		dataType: string
+		lineageTag: 08e2009a-e946-4c52-8ec2-8f21d3531ed2
+		summarizeBy: none
+		sourceColumn: grand_prix
+
+		annotation SummarizationSetBy = Automatic
+
+	column country
+		dataType: string
+		lineageTag: de0395ab-854a-422b-8121-70094cab7e9e
+		summarizeBy: none
+		sourceColumn: country
+
+		annotation SummarizationSetBy = Automatic
+
+	column circuit
+		dataType: string
+		lineageTag: 01706906-30a2-4cca-b551-29ddb02b0f85
+		summarizeBy: none
+		sourceColumn: circuit
+
+		annotation SummarizationSetBy = Automatic
+
+	column race_date
+		dataType: dateTime
+		formatString: Long Date
+		lineageTag: 0c6dcdeb-416c-48ca-bc01-2694c1f89d83
+		summarizeBy: none
+		sourceColumn: race_date
+
+		variation Variation
+			isDefault
+			relationship: 580d86b4-20ef-482b-8823-4b6c9778e2b0
+			defaultHierarchy: LocalDateTable_a9bd511d-3371-4ef8-9a03-b1c7064d3d2e.'Date Hierarchy'
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation UnderlyingDateTimeDataType = Date
+
+	column sprint_remaining
+		dataType: int64
+		formatString: 0
+		lineageTag: 0dcdec25-c675-4747-a9ae-bf2f30f620b0
+		summarizeBy: sum
+		sourceColumn: sprint_remaining
+
+		annotation SummarizationSetBy = Automatic
+
+	column completed
+		dataType: int64
+		formatString: 0
+		lineageTag: 6f6e007f-d6ca-4c5e-90e0-088c5efe0924
+		summarizeBy: sum
+		sourceColumn: completed
+
+		annotation SummarizationSetBy = Automatic
+
+	column track_type
+		dataType: string
+		lineageTag: dfe26cb2-7dbd-40f2-8fbb-2cbdac0d0abb
+		summarizeBy: none
+		sourceColumn: track_type
+
+		annotation SummarizationSetBy = Automatic
+
+	column downforce
+		dataType: int64
+		formatString: 0
+		lineageTag: 2025f68b-e39e-4244-bc2a-7e3ca4ee4a7b
+		summarizeBy: sum
+		sourceColumn: downforce
+
+		annotation SummarizationSetBy = Automatic
+
+	column power
+		dataType: int64
+		formatString: 0
+		lineageTag: 0dab3c9f-cf4f-48d4-aa5e-a76d0cafe357
+		summarizeBy: sum
+		sourceColumn: power
+
+		annotation SummarizationSetBy = Automatic
+
+	column tyre_stress
+		dataType: int64
+		formatString: 0
+		lineageTag: 80082112-12a9-467b-b77d-9cd92d033166
+		summarizeBy: sum
+		sourceColumn: tyre_stress
+
+		annotation SummarizationSetBy = Automatic
+
+	column overtake_difficulty
+		dataType: int64
+		formatString: 0
+		lineageTag: e741d922-12dc-4c9a-9c34-b179ce392e7d
+		summarizeBy: sum
+		sourceColumn: overtake_difficulty
+
+		annotation SummarizationSetBy = Automatic
+
+	column weather_risk
+		dataType: double
+		lineageTag: b74a70d3-3c31-48fd-99af-19329c1c65f3
+		summarizeBy: sum
+		sourceColumn: weather_risk
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column safety_car_risk
+		dataType: int64
+		formatString: 0
+		lineageTag: 4f4c451a-2ad2-4aef-9c70-c050b969e95a
+		summarizeBy: sum
+		sourceColumn: safety_car_risk
+
+		annotation SummarizationSetBy = Automatic
+
+	column qualifying_importance
+		dataType: int64
+		formatString: 0
+		lineageTag: e2f42fd9-4c70-4667-baa2-c5d269f67665
+		summarizeBy: sum
+		sourceColumn: qualifying_importance
+
+		annotation SummarizationSetBy = Automatic
+
+	partition inputs_calendario = m
+		mode: import
+		source =
+				let
+				    Source = Excel.Workbook(File.Contents("C:\Users\fjgon\OneDrive - Quality Analytics\QualityAnalytics\Newsletter\F1 Results\resultados\resultados_montecarlo.xlsx"), null, true),
+				    inputs_calendario_Sheet = Source{[Item="inputs_calendario",Kind="Sheet"]}[Data],
+				    #"Promoted Headers" = Table.PromoteHeaders(inputs_calendario_Sheet, [PromoteAllScalars=true]),
+				    #"Changed Type" = Table.TransformColumnTypes(#"Promoted Headers",{{"round", Int64.Type}, {"grand_prix", type text}, {"country", type text}, {"circuit", type text}, {"race_date", type date}, {"sprint_remaining", Int64.Type}, {"completed", Int64.Type}, {"track_type", type text}, {"downforce", Int64.Type}, {"power", Int64.Type}, {"tyre_stress", Int64.Type}, {"overtake_difficulty", Int64.Type}, {"weather_risk", type number}, {"safety_car_risk", Int64.Type}, {"qualifying_importance", Int64.Type}})
+				in
+				    #"Changed Type"
+
+	annotation PBI_ResultType = Table
+

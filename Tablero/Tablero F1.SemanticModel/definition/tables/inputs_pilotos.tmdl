@@ -1,0 +1,205 @@
+table inputs_pilotos
+	lineageTag: bf83edb8-19af-4294-954f-d7268e672691
+
+	measure 'Avg Driver Rating' = AVERAGE(inputs_pilotos[driver_rating])
+		formatString: 0.0
+
+	measure 'Avg Qualifying' = AVERAGE(inputs_pilotos[qualifying])
+		formatString: 0.0
+
+	measure 'Avg Race Pace' = AVERAGE(inputs_pilotos[race_pace])
+		formatString: 0.0
+
+	measure 'Avg Consistency' = AVERAGE(inputs_pilotos[consistency])
+		formatString: 0.0
+
+	measure 'Avg Tyre Management' = AVERAGE(inputs_pilotos[tyre_management])
+		formatString: 0.0
+
+	measure 'Avg Wet Skill' = AVERAGE(inputs_pilotos[wet_skill])
+		formatString: 0.0
+
+	measure 'Avg Racecraft' = AVERAGE(inputs_pilotos[racecraft])
+		formatString: 0.0
+
+	column driver
+		dataType: string
+		lineageTag: 0a2e1616-0393-405e-a4d8-1281e0309c2b
+		summarizeBy: none
+		sourceColumn: driver
+
+		annotation SummarizationSetBy = Automatic
+
+	column code
+		dataType: string
+		lineageTag: 2886c1c0-3dcb-4e0a-a831-981e4eccb908
+		summarizeBy: none
+		sourceColumn: code
+
+		annotation SummarizationSetBy = Automatic
+
+	column team
+		dataType: string
+		lineageTag: eb04c62d-2298-40ef-b096-fa840d8caf6a
+		summarizeBy: none
+		sourceColumn: team
+
+		annotation SummarizationSetBy = Automatic
+
+	column nationality
+		dataType: string
+		lineageTag: f46f8e12-57fb-4716-9808-55630e75663b
+		summarizeBy: none
+		sourceColumn: nationality
+
+		annotation SummarizationSetBy = Automatic
+
+	column current_points
+		dataType: int64
+		formatString: 0
+		lineageTag: e62be647-aef1-4e90-a563-6935eaa03613
+		summarizeBy: sum
+		sourceColumn: current_points
+
+		annotation SummarizationSetBy = Automatic
+
+	column driver_rating
+		dataType: double
+		lineageTag: c960596d-af0b-4f38-8bae-736c54a76221
+		summarizeBy: sum
+		sourceColumn: driver_rating
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column qualifying
+		dataType: double
+		lineageTag: 573b9d7d-76b5-4dfd-ba47-40e6c2890ad6
+		summarizeBy: sum
+		sourceColumn: qualifying
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column race_pace
+		dataType: double
+		lineageTag: a97e04e9-2556-4e32-9ca1-8a676dec28a8
+		summarizeBy: sum
+		sourceColumn: race_pace
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column consistency
+		dataType: double
+		lineageTag: fd6d46e3-58a6-4462-9d95-5dc42b4e9ee0
+		summarizeBy: sum
+		sourceColumn: consistency
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column tyre_management
+		dataType: int64
+		formatString: 0
+		lineageTag: a5bdab4e-c67c-4d5c-b70d-5520fffa13cb
+		summarizeBy: sum
+		sourceColumn: tyre_management
+
+		annotation SummarizationSetBy = Automatic
+
+	column wet_skill
+		dataType: int64
+		formatString: 0
+		lineageTag: bfd07d92-ecc9-49b3-9119-58332e626caf
+		summarizeBy: sum
+		sourceColumn: wet_skill
+
+		annotation SummarizationSetBy = Automatic
+
+	column racecraft
+		dataType: double
+		lineageTag: ec7d7cba-9959-4d69-a3e2-33b9c3c54bd1
+		summarizeBy: sum
+		sourceColumn: racecraft
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column team_pace
+		dataType: double
+		lineageTag: 033c27ca-1810-4637-b5a8-30faef5653b1
+		summarizeBy: sum
+		sourceColumn: team_pace
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column chassis
+		dataType: double
+		lineageTag: 338c407d-0b48-406e-8da6-83a54a64940f
+		summarizeBy: sum
+		sourceColumn: chassis
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column power_unit
+		dataType: double
+		lineageTag: e6a1ee1f-52af-4b94-815b-ece48969a003
+		summarizeBy: sum
+		sourceColumn: power_unit
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column strategy
+		dataType: int64
+		formatString: 0
+		lineageTag: afe0afd0-7313-49fe-8739-967d0a03f15e
+		summarizeBy: sum
+		sourceColumn: strategy
+
+		annotation SummarizationSetBy = Automatic
+
+	column reliability
+		dataType: double
+		lineageTag: 5b6d7d11-43dd-44e9-95f8-bcfa10f33ecc
+		summarizeBy: sum
+		sourceColumn: reliability
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column recent_form
+		dataType: double
+		lineageTag: f5f9977a-cce5-49a7-b176-dd5eb6269a9e
+		summarizeBy: sum
+		sourceColumn: recent_form
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	partition inputs_pilotos = m
+		mode: import
+		source =
+				let
+				    Source = Excel.Workbook(File.Contents("C:\Users\fjgon\OneDrive - Quality Analytics\QualityAnalytics\Newsletter\F1 Results\resultados\resultados_montecarlo.xlsx"), null, true),
+				    inputs_pilotos_Sheet = Source{[Item="inputs_pilotos",Kind="Sheet"]}[Data],
+				    #"Promoted Headers" = Table.PromoteHeaders(inputs_pilotos_Sheet, [PromoteAllScalars=true]),
+				    #"Changed Type" = Table.TransformColumnTypes(#"Promoted Headers",{{"driver", type text}, {"code", type text}, {"team", type text}, {"nationality", type text}, {"current_points", Int64.Type}, {"driver_rating", type number}, {"qualifying", type number}, {"race_pace", type number}, {"consistency", type number}, {"tyre_management", Int64.Type}, {"wet_skill", Int64.Type}, {"racecraft", type number}, {"team_pace", type number}, {"chassis", type number}, {"power_unit", type number}, {"strategy", Int64.Type}, {"reliability", type number}, {"recent_form", type number}})
+				in
+				    #"Changed Type"
+
+	annotation PBI_ResultType = Table
+

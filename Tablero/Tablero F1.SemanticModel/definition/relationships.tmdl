@@ -1,0 +1,33 @@
+relationship 580d86b4-20ef-482b-8823-4b6c9778e2b0
+	joinOnDateBehavior: datePartOnly
+	fromColumn: inputs_calendario.race_date
+	toColumn: LocalDateTable_a9bd511d-3371-4ef8-9a03-b1c7064d3d2e.Date
+
+relationship AutoDetected_c9b1223a-0f41-457e-84a6-ffab51d9fdc7
+	fromColumn: gp_probabilidades.team
+	toColumn: constructores.team
+
+relationship AutoDetected_62b251d4-f218-46e1-9e55-a4fa51d9e1ac
+	fromColumn: pilotos.team
+	toColumn: constructores.team
+
+relationship AutoDetected_8d8a7cae-b00d-4e2e-9832-67e435923efb
+	fromColumn: inputs_pilotos.team
+	toColumn: constructores.team
+
+relationship AutoDetected_767032a7-a538-47d2-b933-66da382409c0
+	fromColumn: gp_probabilidades.round
+	toColumn: inputs_calendario.round
+
+relationship AutoDetected_6e0a9486-602a-4d9b-853d-2a0e2afc3897
+	isActive: false
+	fromColumn: gp_probabilidades.driver
+	toColumn: pilotos.driver
+
+relationship AutoDetected_439a407e-1636-43d3-822d-e207f5b9e1a7
+	isActive: false
+	crossFilteringBehavior: bothDirections
+	fromCardinality: one
+	fromColumn: inputs_pilotos.driver
+	toColumn: pilotos.driver
+

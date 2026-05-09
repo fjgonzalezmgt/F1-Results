@@ -1,0 +1,55 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.7.0/schema.json",
+  "name": "v020_tabla",
+  "position": {
+    "x": 24,
+    "y": 236,
+    "z": 2,
+    "height": 434,
+    "width": 1232,
+    "tabOrder": 2
+  },
+  "visual": {
+    "visualType": "tableEx",
+    "query": {
+      "queryState": {
+        "Values": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "parametros"
+                    }
+                  },
+                  "Property": "parametro"
+                }
+              },
+              "queryRef": "parametros.parametro"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "parametros"
+                    }
+                  },
+                  "Property": "valor"
+                }
+              },
+              "queryRef": "parametros.valor"
+            }
+          ]
+        }
+      }
+    }
+  },
+  "annotations": [
+    {
+      "name": "codex_bind",
+      "value": "Campos: parametros[parametro], parametros[valor]. Usa esta pagina para revisar pesos, semilla y configuracion del modelo."
+    }
+  ]
+}

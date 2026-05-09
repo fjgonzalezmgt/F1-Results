@@ -1,0 +1,195 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.8.0/schema.json",
+  "name": "v020_calendario",
+  "position": {
+    "x": 24.316109422492403,
+    "y": 236.35258358662614,
+    "z": 2,
+    "height": 433.79939209726444,
+    "width": 742.12765957446811,
+    "tabOrder": 2
+  },
+  "visual": {
+    "visualType": "tableEx",
+    "query": {
+      "queryState": {
+        "Values": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "inputs_calendario"
+                    }
+                  },
+                  "Property": "round"
+                }
+              },
+              "queryRef": "inputs_calendario.round"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "inputs_calendario"
+                    }
+                  },
+                  "Property": "grand_prix"
+                }
+              },
+              "queryRef": "inputs_calendario.grand_prix"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "inputs_calendario"
+                    }
+                  },
+                  "Property": "race_date"
+                }
+              },
+              "queryRef": "inputs_calendario.race_date"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "inputs_calendario"
+                    }
+                  },
+                  "Property": "track_type"
+                }
+              },
+              "queryRef": "inputs_calendario.track_type"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "inputs_calendario"
+                    }
+                  },
+                  "Property": "weather_risk"
+                }
+              },
+              "queryRef": "inputs_calendario.weather_risk"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "inputs_calendario"
+                    }
+                  },
+                  "Property": "safety_car_risk"
+                }
+              },
+              "queryRef": "inputs_calendario.safety_car_risk"
+            }
+          ]
+        }
+      }
+    }
+  },
+  "filterConfig": {
+    "filters": [
+      {
+        "name": "b9d55d89de2cf35549a9",
+        "field": {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "inputs_calendario"
+              }
+            },
+            "Property": "round"
+          }
+        },
+        "type": "Advanced"
+      },
+      {
+        "name": "ff4c9b8e53a81afa85a2",
+        "field": {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "inputs_calendario"
+              }
+            },
+            "Property": "grand_prix"
+          }
+        },
+        "type": "Categorical"
+      },
+      {
+        "name": "912f79b0fcfc2fa95ad3",
+        "field": {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "inputs_calendario"
+              }
+            },
+            "Property": "race_date"
+          }
+        },
+        "type": "Categorical"
+      },
+      {
+        "name": "005a195c1b9db2936130",
+        "field": {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "inputs_calendario"
+              }
+            },
+            "Property": "track_type"
+          }
+        },
+        "type": "Categorical"
+      },
+      {
+        "name": "26db03aa1b9dc3d6a25c",
+        "field": {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "inputs_calendario"
+              }
+            },
+            "Property": "weather_risk"
+          }
+        },
+        "type": "Advanced"
+      },
+      {
+        "name": "30125d6205fd4f865fc5",
+        "field": {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "inputs_calendario"
+              }
+            },
+            "Property": "safety_car_risk"
+          }
+        },
+        "type": "Advanced"
+      }
+    ]
+  },
+  "annotations": [
+    {
+      "name": "codex_bind",
+      "value": "Campos: round, grand_prix, country, circuit, race_date, completed, track_type, weather_risk, safety_car_risk, qualifying_importance."
+    }
+  ]
+}

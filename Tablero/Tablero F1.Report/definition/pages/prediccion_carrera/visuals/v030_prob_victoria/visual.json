@@ -1,0 +1,42 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.7.0/schema.json",
+  "name": "v030_prob_victoria",
+  "position": {
+    "x": 644,
+    "y": 84,
+    "z": 3,
+    "height": 110,
+    "width": 290,
+    "tabOrder": 3
+  },
+  "visual": {
+    "visualType": "card",
+    "query": {
+      "queryState": {
+        "Values": {
+          "projections": [
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "gp_probabilidades"
+                    }
+                  },
+                  "Property": "Prob Victoria Carrera"
+                }
+              },
+              "queryRef": "gp_probabilidades.Prob Victoria Carrera"
+            }
+          ]
+        }
+      }
+    }
+  },
+  "annotations": [
+    {
+      "name": "codex_bind",
+      "value": "Medida sugerida: gp_probabilidades[Prob Victoria Carrera], filtrada por Gran Premio y seleccion de piloto"
+    }
+  ]
+}

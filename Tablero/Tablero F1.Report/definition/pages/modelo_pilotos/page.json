@@ -1,0 +1,14 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/page/2.1.0/schema.json",
+  "name": "modelo_pilotos",
+  "displayName": "Modelo Pilotos",
+  "displayOption": "FitToPage",
+  "height": 720,
+  "width": 1280,
+  "annotations": [
+    {
+      "name": "codex_layout",
+      "value": "Explicabilidad fan: ratings de piloto, qualy, ritmo de carrera, consistencia, manejo de neumaticos, lluvia, racecraft y forma reciente."
+    }
+  ]
+}

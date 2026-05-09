@@ -1,0 +1,243 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.8.0/schema.json",
+  "name": "v010_ratings",
+  "position": {
+    "x": 24.316109422492403,
+    "y": 83.647416413373861,
+    "z": 1,
+    "height": 276.23100303951367,
+    "width": 859.81762917933133,
+    "tabOrder": 1
+  },
+  "visual": {
+    "visualType": "tableEx",
+    "query": {
+      "queryState": {
+        "Values": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "inputs_pilotos"
+                    }
+                  },
+                  "Property": "driver"
+                }
+              },
+              "queryRef": "inputs_pilotos.driver"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "inputs_pilotos"
+                    }
+                  },
+                  "Property": "team"
+                }
+              },
+              "queryRef": "inputs_pilotos.team"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "inputs_pilotos"
+                    }
+                  },
+                  "Property": "driver_rating"
+                }
+              },
+              "queryRef": "inputs_pilotos.driver_rating"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "inputs_pilotos"
+                    }
+                  },
+                  "Property": "qualifying"
+                }
+              },
+              "queryRef": "inputs_pilotos.qualifying"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "inputs_pilotos"
+                    }
+                  },
+                  "Property": "race_pace"
+                }
+              },
+              "queryRef": "inputs_pilotos.race_pace"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "inputs_pilotos"
+                    }
+                  },
+                  "Property": "recent_form"
+                }
+              },
+              "queryRef": "inputs_pilotos.recent_form"
+            }
+          ]
+        }
+      }
+    },
+    "visualContainerObjects": {
+      "title": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            },
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Resumen de fuerza por piloto'"
+                }
+              }
+            },
+            "fontColor": {
+              "solid": {}
+            }
+          }
+        }
+      ],
+      "subTitle": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            },
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Ordena y filtra para detectar favoritos por rating general, qualy, ritmo y forma reciente.'"
+                }
+              }
+            },
+            "fontColor": {
+              "solid": {}
+            }
+          }
+        }
+      ]
+    }
+  },
+  "filterConfig": {
+    "filters": [
+      {
+        "name": "2155056732d517ebd8a8",
+        "field": {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "inputs_pilotos"
+              }
+            },
+            "Property": "driver"
+          }
+        },
+        "type": "Categorical"
+      },
+      {
+        "name": "780958f096d92162041f",
+        "field": {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "inputs_pilotos"
+              }
+            },
+            "Property": "team"
+          }
+        },
+        "type": "Categorical"
+      },
+      {
+        "name": "6e3e0023eddddf5a5820",
+        "field": {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "inputs_pilotos"
+              }
+            },
+            "Property": "driver_rating"
+          }
+        },
+        "type": "Advanced"
+      },
+      {
+        "name": "dadc3fa1c96688a548fd",
+        "field": {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "inputs_pilotos"
+              }
+            },
+            "Property": "qualifying"
+          }
+        },
+        "type": "Advanced"
+      },
+      {
+        "name": "83404d41bbe860d1fe3a",
+        "field": {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "inputs_pilotos"
+              }
+            },
+            "Property": "race_pace"
+          }
+        },
+        "type": "Advanced"
+      },
+      {
+        "name": "d5e93fc56cb178266e96",
+        "field": {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "inputs_pilotos"
+              }
+            },
+            "Property": "recent_form"
+          }
+        },
+        "type": "Advanced"
+      }
+    ]
+  },
+  "annotations": [
+    {
+      "name": "codex_bind",
+      "value": "Campos: inputs_pilotos[driver], team, nationality, driver_rating, qualifying, race_pace, consistency, recent_form."
+    }
+  ]
+}

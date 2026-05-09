@@ -1,0 +1,107 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.7.0/schema.json",
+  "name": "v020_ranking",
+  "position": {
+    "x": 24,
+    "y": 236,
+    "z": 2,
+    "height": 434,
+    "width": 620,
+    "tabOrder": 2
+  },
+  "visual": {
+    "visualType": "tableEx",
+    "query": {
+      "queryState": {
+        "Values": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "pilotos"
+                    }
+                  },
+                  "Property": "driver"
+                }
+              },
+              "queryRef": "pilotos.driver"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "pilotos"
+                    }
+                  },
+                  "Property": "team"
+                }
+              },
+              "queryRef": "pilotos.team"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "pilotos"
+                    }
+                  },
+                  "Property": "current_points"
+                }
+              },
+              "queryRef": "pilotos.current_points"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "pilotos"
+                    }
+                  },
+                  "Property": "expected_points"
+                }
+              },
+              "queryRef": "pilotos.expected_points"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "pilotos"
+                    }
+                  },
+                  "Property": "avg_final_rank"
+                }
+              },
+              "queryRef": "pilotos.avg_final_rank"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "pilotos"
+                    }
+                  },
+                  "Property": "champion_pct"
+                }
+              },
+              "queryRef": "pilotos.champion_pct"
+            }
+          ]
+        }
+      }
+    }
+  },
+  "annotations": [
+    {
+      "name": "codex_bind",
+      "value": "Campos: pilotos[driver], team, current_points, expected_points, avg_final_rank, champion_pct, top3_pct, top6_pct."
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/page/2.1.0/schema.json",
+  "name": "prediccion_carrera",
+  "displayName": "Prediccion Carrera",
+  "displayOption": "FitToPage",
+  "height": 720,
+  "width": 1280,
+  "annotations": [
+    {
+      "name": "codex_layout",
+      "value": "Vista principal para decidir quien llega como favorito al proximo GP: tarjetas de proximo GP, ganador probable, probabilidades, ranking por carrera y riesgos del circuito."
+    }
+  ]
+}

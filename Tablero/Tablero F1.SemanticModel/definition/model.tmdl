@@ -1,0 +1,25 @@
+model Model
+	culture: en-US
+	defaultPowerBIDataSourceVersion: powerBI_V3
+	sourceQueryCulture: es-GT
+	dataAccessOptions
+		legacyRedirects
+		returnErrorValuesAsNull
+
+annotation __PBI_TimeIntelligenceEnabled = 1
+
+annotation PBI_ProTooling = ["DevMode"]
+
+annotation PBI_QueryOrder = ["constructores","gp_probabilidades","inputs_calendario","parametros","pilotos","inputs_pilotos"]
+
+ref table constructores
+ref table gp_probabilidades
+ref table inputs_calendario
+ref table DateTableTemplate_5ebe325e-5c9f-4aeb-b447-0f52793f98d7
+ref table LocalDateTable_a9bd511d-3371-4ef8-9a03-b1c7064d3d2e
+ref table parametros
+ref table pilotos
+ref table inputs_pilotos
+
+ref cultureInfo en-US
+

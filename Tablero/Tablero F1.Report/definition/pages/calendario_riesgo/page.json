@@ -1,0 +1,14 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/page/2.1.0/schema.json",
+  "name": "calendario_riesgo",
+  "displayName": "Calendario y Riesgo",
+  "displayOption": "FitToPage",
+  "height": 720,
+  "width": 1280,
+  "annotations": [
+    {
+      "name": "codex_layout",
+      "value": "Lectura del calendario restante: carreras completadas, pendientes, sprints, caracteristicas de pista y riesgos de clima/safety car."
+    }
+  ]
+}

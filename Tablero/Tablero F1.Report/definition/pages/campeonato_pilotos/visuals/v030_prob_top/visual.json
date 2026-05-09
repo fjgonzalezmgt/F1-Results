@@ -1,0 +1,245 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.8.0/schema.json",
+  "name": "v030_prob_top",
+  "position": {
+    "x": 674,
+    "y": 84,
+    "z": 3,
+    "height": 586,
+    "width": 582,
+    "tabOrder": 3
+  },
+  "visual": {
+    "visualType": "clusteredColumnChart",
+    "query": {
+      "queryState": {
+        "Category": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "pilotos"
+                    }
+                  },
+                  "Property": "driver"
+                }
+              },
+              "queryRef": "pilotos.driver",
+              "active": true
+            }
+          ]
+        },
+        "Y": {
+          "projections": [
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "pilotos"
+                    }
+                  },
+                  "Property": "Prob Campeon Pilotos"
+                }
+              },
+              "queryRef": "pilotos.Prob Campeon Pilotos"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "pilotos"
+                    }
+                  },
+                  "Property": "Prob Top 3 Pilotos"
+                }
+              },
+              "queryRef": "pilotos.Prob Top 3 Pilotos"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "pilotos"
+                    }
+                  },
+                  "Property": "Prob Top 6 Pilotos"
+                }
+              },
+              "queryRef": "pilotos.Prob Top 6 Pilotos"
+            }
+          ]
+        }
+      },
+      "sortDefinition": {
+        "sort": [
+          {
+            "field": {
+              "Measure": {
+                "Expression": {
+                  "SourceRef": {
+                    "Entity": "pilotos"
+                  }
+                },
+                "Property": "Prob Campeon Pilotos"
+              }
+            },
+            "direction": "Descending"
+          }
+        ]
+      }
+    }
+  },
+  "filterConfig": {
+    "filters": [
+      {
+        "name": "e68eb12644742f8075d1",
+        "field": {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "pilotos"
+              }
+            },
+            "Property": "driver"
+          }
+        },
+        "type": "TopN",
+        "filter": {
+          "Version": 2,
+          "From": [
+            {
+              "Name": "subquery",
+              "Expression": {
+                "Subquery": {
+                  "Query": {
+                    "Version": 2,
+                    "From": [
+                      {
+                        "Name": "p",
+                        "Entity": "pilotos",
+                        "Type": 0
+                      }
+                    ],
+                    "Select": [
+                      {
+                        "Column": {
+                          "Expression": {
+                            "SourceRef": {
+                              "Source": "p"
+                            }
+                          },
+                          "Property": "driver"
+                        },
+                        "Name": "field"
+                      }
+                    ],
+                    "OrderBy": [
+                      {
+                        "Direction": 2,
+                        "Expression": {
+                          "Measure": {
+                            "Expression": {
+                              "SourceRef": {
+                                "Source": "p"
+                              }
+                            },
+                            "Property": "Prob Campeon Pilotos"
+                          }
+                        }
+                      }
+                    ],
+                    "Top": 8
+                  }
+                }
+              },
+              "Type": 2
+            },
+            {
+              "Name": "p",
+              "Entity": "pilotos",
+              "Type": 0
+            }
+          ],
+          "Where": [
+            {
+              "Condition": {
+                "In": {
+                  "Expressions": [
+                    {
+                      "Column": {
+                        "Expression": {
+                          "SourceRef": {
+                            "Source": "p"
+                          }
+                        },
+                        "Property": "driver"
+                      }
+                    }
+                  ],
+                  "Table": {
+                    "SourceRef": {
+                      "Source": "subquery"
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      {
+        "name": "6cadc3ec5921be85ab51",
+        "field": {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "pilotos"
+              }
+            },
+            "Property": "Prob Campeon Pilotos"
+          }
+        },
+        "type": "Advanced"
+      },
+      {
+        "name": "73ac2b648e4862979e1d",
+        "field": {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "pilotos"
+              }
+            },
+            "Property": "Prob Top 3 Pilotos"
+          }
+        },
+        "type": "Advanced"
+      },
+      {
+        "name": "bfce13667190ac932952",
+        "field": {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "pilotos"
+              }
+            },
+            "Property": "Prob Top 6 Pilotos"
+          }
+        },
+        "type": "Advanced"
+      }
+    ]
+  },
+  "annotations": [
+    {
+      "name": "codex_bind",
+      "value": "Eje: pilotos[driver]. Valores: pilotos[Prob Campeon Pilotos], pilotos[Prob Top 3 Pilotos], pilotos[Prob Top 6 Pilotos]."
+    }
+  ]
+}

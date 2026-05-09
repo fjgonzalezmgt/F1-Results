@@ -1,0 +1,76 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.8.0/schema.json",
+  "name": "v040_selector_piloto",
+  "position": {
+    "x": 904,
+    "y": 166,
+    "z": 4,
+    "height": 68,
+    "width": 352,
+    "tabOrder": 4
+  },
+  "visual": {
+    "visualType": "slicer",
+    "query": {
+      "queryState": {
+        "Values": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "inputs_pilotos"
+                    }
+                  },
+                  "Property": "driver"
+                }
+              },
+              "queryRef": "inputs_pilotos.driver",
+              "active": true
+            }
+          ]
+        }
+      }
+    },
+    "objects": {
+      "data": [
+        {
+          "properties": {
+            "mode": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Dropdown'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  },
+  "filterConfig": {
+    "filters": [
+      {
+        "name": "411614486c047e0d51cb",
+        "field": {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Entity": "inputs_pilotos"
+              }
+            },
+            "Property": "driver"
+          }
+        },
+        "type": "Categorical"
+      }
+    ]
+  },
+  "annotations": [
+    {
+      "name": "codex_bind",
+      "value": "Filtro por piloto para leer su perfil sin ruido visual."
+    }
+  ]
+}

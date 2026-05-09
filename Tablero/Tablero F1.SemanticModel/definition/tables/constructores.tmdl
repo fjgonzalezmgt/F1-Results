@@ -1,0 +1,100 @@
+table constructores
+	lineageTag: f874a2a1-eeaa-4f2a-818e-cb9232e0af88
+
+	measure 'Puntos Actuales Constructores' = SUM(constructores[current_points])
+		formatString: 0
+		lineageTag: 4f0901a2-f498-444b-8dfa-d1b79ec112a4
+
+	measure 'Puntos Esperados Constructores' = SUM(constructores[expected_points])
+		formatString: 0.0
+		lineageTag: e40938d2-9964-4474-947f-95d9f02866c2
+
+	measure 'Ranking Promedio Constructores' = AVERAGE(constructores[avg_final_rank])
+		formatString: 0.00
+		lineageTag: 443eba07-097a-430f-a3da-fc4893c8433b
+
+	measure 'Prob Campeon Constructores' = DIVIDE(MAX(constructores[champion_pct]), 100)
+		formatString: 0.0%
+		lineageTag: d9ee2eb8-0ff2-4c60-8184-c7fda9433926
+
+	measure 'Prob Top 3 Constructores' = DIVIDE(MAX(constructores[top3_pct]), 100)
+		formatString: 0.0%
+		lineageTag: 5890cc07-3b98-4676-83ba-f522eb4682a9
+
+	measure 'Constructor Campeon Mas Probable' =
+			VAR TopEquipo =
+				TOPN(1, ALL(constructores), constructores[champion_pct], DESC, constructores[expected_points], DESC)
+			RETURN
+				CONCATENATEX(TopEquipo, constructores[team])
+		lineageTag: a9820c09-1e8f-42b0-a959-479adfebd840
+
+	column team
+		dataType: string
+		lineageTag: ea6c96aa-7b62-400c-91c5-c20adc99b409
+		summarizeBy: none
+		sourceColumn: team
+
+		annotation SummarizationSetBy = Automatic
+
+	column current_points
+		dataType: int64
+		formatString: 0
+		lineageTag: f3f895f7-e3d4-4593-b827-dc465767088a
+		summarizeBy: sum
+		sourceColumn: current_points
+
+		annotation SummarizationSetBy = Automatic
+
+	column expected_points
+		dataType: double
+		lineageTag: 2dd1d9dd-8ced-4b9b-b17c-56d7c8f954fd
+		summarizeBy: sum
+		sourceColumn: expected_points
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column avg_final_rank
+		dataType: double
+		lineageTag: 29016c9a-a994-4244-bae7-8730fe47087c
+		summarizeBy: sum
+		sourceColumn: avg_final_rank
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column champion_pct
+		dataType: double
+		lineageTag: 3269eb71-3480-430d-983d-23b8f228fc66
+		summarizeBy: sum
+		sourceColumn: champion_pct
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column top3_pct
+		dataType: double
+		lineageTag: 678d33f3-7cd6-4467-b243-b8f88d5b44a6
+		summarizeBy: sum
+		sourceColumn: top3_pct
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	partition constructores = m
+		mode: import
+		source =
+				let
+				    Source = Excel.Workbook(File.Contents("C:\Users\fjgon\OneDrive - Quality Analytics\QualityAnalytics\Newsletter\F1 Results\resultados\resultados_montecarlo.xlsx"), null, true),
+				    constructores_Sheet = Source{[Item="constructores",Kind="Sheet"]}[Data],
+				    #"Promoted Headers" = Table.PromoteHeaders(constructores_Sheet, [PromoteAllScalars=true]),
+				    #"Changed Type" = Table.TransformColumnTypes(#"Promoted Headers",{{"team", type text}, {"current_points", Int64.Type}, {"expected_points", type number}, {"avg_final_rank", type number}, {"champion_pct", type number}, {"top3_pct", type number}})
+				in
+				    #"Changed Type"
+
+	annotation PBI_ResultType = Table
+

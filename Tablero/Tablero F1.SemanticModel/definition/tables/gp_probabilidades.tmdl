@@ -1,0 +1,94 @@
+table gp_probabilidades
+	lineageTag: d6955d39-c272-4e3c-97c7-cb1e221713fb
+
+	measure 'Prob Victoria GP' = DIVIDE(SUM(gp_probabilidades[win_pct]), 100)
+		formatString: 0.0%
+		lineageTag: 7c4ac538-eb52-4217-a19d-eab226cc83a2
+
+	measure 'Promedio Prob Victoria GP' = DIVIDE(AVERAGE(gp_probabilidades[win_pct]), 100)
+		formatString: 0.0%
+		lineageTag: e239cff2-9742-48f9-9db8-6068c498a501
+
+	measure 'Victorias Esperadas Restantes' = SUMX(gp_probabilidades, DIVIDE(gp_probabilidades[win_pct], 100))
+		formatString: 0.00
+		lineageTag: 3e4ea2cd-72ec-4751-9ef9-74fab2129214
+
+	measure 'Ganador GP Mas Probable' =
+			VAR TopPiloto =
+				TOPN(
+					1,
+					ALLSELECTED(gp_probabilidades),
+					gp_probabilidades[win_pct], DESC,
+					gp_probabilidades[code], ASC
+				)
+			RETURN
+				CONCATENATEX(TopPiloto, gp_probabilidades[driver])
+		lineageTag: 16c7e2bc-440a-44ae-a338-ace2fc48a799
+
+	measure 'Prob Victoria Carrera' = DIVIDE(MAX(gp_probabilidades[win_pct]), 100)
+		formatString: 0.0%
+
+	column round
+		dataType: int64
+		formatString: 0
+		lineageTag: dbcee1a4-2fec-4630-b690-2dbdc6600c96
+		summarizeBy: none
+		sourceColumn: round
+
+		annotation SummarizationSetBy = Automatic
+
+	column grand_prix
+		dataType: string
+		lineageTag: 59ef01ad-efca-4c2f-8f6d-bb16bdccb8eb
+		summarizeBy: none
+		sourceColumn: grand_prix
+
+		annotation SummarizationSetBy = Automatic
+
+	column driver
+		dataType: string
+		lineageTag: 0f82f0ca-ba54-44b3-996c-b010051b1d7b
+		summarizeBy: none
+		sourceColumn: driver
+
+		annotation SummarizationSetBy = Automatic
+
+	column code
+		dataType: string
+		lineageTag: bd698247-5924-4b72-b275-41529e6f6f6e
+		summarizeBy: none
+		sourceColumn: code
+
+		annotation SummarizationSetBy = Automatic
+
+	column team
+		dataType: string
+		lineageTag: 3c9fbf49-ca0a-41a0-b00a-dde2aa28aa71
+		summarizeBy: none
+		sourceColumn: team
+
+		annotation SummarizationSetBy = Automatic
+
+	column win_pct
+		dataType: double
+		lineageTag: 79cb15c4-71cc-4cce-af31-2983cbf61455
+		summarizeBy: sum
+		sourceColumn: win_pct
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	partition gp_probabilidades = m
+		mode: import
+		source =
+				let
+				    Source = Excel.Workbook(File.Contents("C:\Users\fjgon\OneDrive - Quality Analytics\QualityAnalytics\Newsletter\F1 Results\resultados\resultados_montecarlo.xlsx"), null, true),
+				    gp_probabilidades_Sheet = Source{[Item="gp_probabilidades",Kind="Sheet"]}[Data],
+				    #"Promoted Headers" = Table.PromoteHeaders(gp_probabilidades_Sheet, [PromoteAllScalars=true]),
+				    #"Changed Type" = Table.TransformColumnTypes(#"Promoted Headers",{{"round", Int64.Type}, {"grand_prix", type text}, {"driver", type text}, {"code", type text}, {"team", type text}, {"win_pct", type number}})
+				in
+				    #"Changed Type"
+
+	annotation PBI_ResultType = Table
+

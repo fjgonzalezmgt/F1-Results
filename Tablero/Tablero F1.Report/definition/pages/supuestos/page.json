@@ -1,0 +1,14 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/page/2.1.0/schema.json",
+  "name": "supuestos",
+  "displayName": "Supuestos Monte Carlo",
+  "displayOption": "FitToPage",
+  "height": 720,
+  "width": 1280,
+  "annotations": [
+    {
+      "name": "codex_layout",
+      "value": "Pagina de auditoria del modelo: simulaciones, semilla, ronda inicial, pesos y parametros para entender por que el modelo predice lo que predice."
+    }
+  ]
+}

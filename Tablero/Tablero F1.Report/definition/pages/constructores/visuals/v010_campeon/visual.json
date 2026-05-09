@@ -1,0 +1,42 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.7.0/schema.json",
+  "name": "v010_campeon",
+  "position": {
+    "x": 24,
+    "y": 84,
+    "z": 1,
+    "height": 130,
+    "width": 390,
+    "tabOrder": 1
+  },
+  "visual": {
+    "visualType": "card",
+    "query": {
+      "queryState": {
+        "Values": {
+          "projections": [
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "constructores"
+                    }
+                  },
+                  "Property": "Constructor Campeon Mas Probable"
+                }
+              },
+              "queryRef": "constructores.Constructor Campeon Mas Probable"
+            }
+          ]
+        }
+      }
+    }
+  },
+  "annotations": [
+    {
+      "name": "codex_bind",
+      "value": "Medida sugerida: constructores[Constructor Campeon Mas Probable]"
+    }
+  ]
+}
