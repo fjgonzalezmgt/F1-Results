@@ -17,6 +17,7 @@ from typing import Any
 import pandas as pd
 
 from f1predictor.config import DRIVER_RATING_COLUMNS
+from f1predictor.logging_utils import instrument_module_functions, logger
 
 
 LLM_INSTRUCTIONS = (
@@ -180,6 +181,7 @@ def call_llm_formula1_official_update(
     """
     from openai import OpenAI
 
+    logger.info("Consultando Formula1.com via LLM: modelo={}, temporada={}", model, season)
     client = OpenAI()
     driver_seed = drivers[["driver", "code", "team"]].to_dict(orient="records")
     calendar_seed = calendar[["round", "grand_prix", "country", "circuit", "race_date"]].to_dict(orient="records")
@@ -293,6 +295,7 @@ def call_llm_context_search(model: str, drivers: pd.DataFrame, calendar: pd.Data
     """
     from openai import OpenAI
 
+    logger.info("Buscando contexto LLM: modelo={}, ronda={}", model, round_no)
     client = OpenAI()
     race = calendar.loc[calendar["round"] == round_no].iloc[0].to_dict()
     standings = drivers[["driver", "code", "team", "current_points", "recent_form"]].to_dict(orient="records")
@@ -409,6 +412,7 @@ def call_llm_analysis(model: str, payload: dict[str, Any]) -> str:
     """
     from openai import OpenAI
 
+    logger.info("Generando analisis LLM: modelo={}, payload_keys={}", model, list(payload))
     client = OpenAI()
     response = client.responses.create(
         model=model,
@@ -416,3 +420,6 @@ def call_llm_analysis(model: str, payload: dict[str, Any]) -> str:
         input=json.dumps(payload, ensure_ascii=True),
     )
     return _extract_response_text(response)
+
+
+instrument_module_functions(__name__)

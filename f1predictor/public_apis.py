@@ -28,6 +28,7 @@ from f1predictor.config import (
     OPENF1_BASE_URL,
 )
 from f1predictor.data import clean_calendar, clean_drivers
+from f1predictor.logging_utils import instrument_module_functions, logger
 
 
 REQUEST_TIMEOUT_SECONDS = 20
@@ -163,12 +164,14 @@ def _request_json(
         CACHE_DIR.mkdir(parents=True, exist_ok=True)
         cache_path = CACHE_DIR / cache_name
         if cache_path.exists() and time.time() - cache_path.stat().st_mtime <= ttl_seconds:
+            logger.info("API cache vigente: {}", cache_path)
             return json.loads(cache_path.read_text(encoding="utf-8"))
 
     request = Request(url, headers=HTTP_HEADERS)
     retryable_statuses = {429, 500, 502, 503, 504}
     for attempt in range(4):
         try:
+            logger.info("Consultando API publica: {}", url)
             with urlopen(request, timeout=REQUEST_TIMEOUT_SECONDS) as response:
                 payload = json.loads(response.read().decode("utf-8"))
             break
@@ -179,6 +182,13 @@ def _request_json(
                     wait_seconds = float(retry_after) if retry_after else 1.5 * (attempt + 1)
                 except ValueError:
                     wait_seconds = 1.5 * (attempt + 1)
+                logger.warning(
+                    "API respondio HTTP {}; reintento {}/3 en {:.1f}s: {}",
+                    exc.code,
+                    attempt + 1,
+                    min(wait_seconds, 8.0),
+                    url,
+                )
                 time.sleep(min(wait_seconds, 8.0))
                 continue
             raise PublicApiError(f"HTTP {exc.code} al consultar {url}") from exc
@@ -189,6 +199,7 @@ def _request_json(
 
     if cache_path:
         cache_path.write_text(json.dumps(payload), encoding="utf-8")
+        logger.info("API cache guardado: {}", cache_path)
     return payload
 
 
@@ -1563,6 +1574,12 @@ def refresh_model_inputs_from_public_apis(
         Dataclass containing updated ``drivers``, ``calendar``, ``summary``
         messages, ``sources`` URLs and ``errors`` encountered.
     """
+    logger.info(
+        "Actualizacion con APIs publicas iniciada: temporada={}, historico={}, openf1={}",
+        season,
+        history_seasons,
+        use_openf1,
+    )
     summary: list[str] = []
     sources = [
         f"{JOLPICA_BASE_URL}/ergast/f1/{season}/driverstandings.json",
@@ -1637,10 +1654,34 @@ def refresh_model_inputs_from_public_apis(
         except PublicApiError as exc:
             errors.append(str(exc))
 
-    return PublicApiResult(
+    result = PublicApiResult(
         drivers=updated_drivers,
         calendar=updated_calendar,
         summary=summary,
         sources=sources,
         errors=errors,
     )
+    logger.info(
+        "Actualizacion con APIs publicas terminada: pilotos={}, carreras={}, avisos={}",
+        len(result.drivers),
+        len(result.calendar),
+        len(result.errors),
+    )
+    return result
+
+
+instrument_module_functions(
+    __name__,
+    skip=(
+        "_normalize_text",
+        "_bounded",
+        "_score_from_position",
+        "_fallback_code",
+        "_is_dnf_status",
+        "_sample_confidence",
+        "_shrink_toward",
+        "_constructor_position_score",
+        "_blend",
+        "_infer_track_features",
+    ),
+)

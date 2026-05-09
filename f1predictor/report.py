@@ -21,6 +21,7 @@ from f1predictor.config import (
     REPORT_TEX_PATH,
     TEAM_COLORS,
 )
+from f1predictor.logging_utils import instrument_module_functions
 from f1predictor.parameters import SimParams
 
 
@@ -758,3 +759,6 @@ def _latex_escape(text: str) -> str:
         "^": r"\textasciicircum{}",
     }
     return "".join(replacements.get(char, char) for char in text)
+
+
+instrument_module_functions(__name__)

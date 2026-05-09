@@ -19,6 +19,7 @@ from f1predictor.config import (
     DRIVER_REQUIRED_COLUMNS,
     DRIVERS_PATH,
 )
+from f1predictor.logging_utils import instrument_module_functions
 
 
 def load_drivers(path=DRIVERS_PATH) -> pd.DataFrame:
@@ -390,3 +391,6 @@ def apply_official_formula1_update(
         updated_calendar = apply_calendar_update(updated_calendar, payload["calendar"])
 
     return clean_drivers(updated_drivers), clean_calendar(updated_calendar)
+
+
+instrument_module_functions(__name__)

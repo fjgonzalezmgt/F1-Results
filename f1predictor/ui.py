@@ -14,7 +14,6 @@ import json
 import pandas as pd
 import plotly.express as px
 import streamlit as st
-import streamlit.components.v1 as components
 from dotenv import load_dotenv
 
 from f1predictor.config import (
@@ -53,6 +52,7 @@ from f1predictor.llm import (
     call_llm_formula1_official_update,
     default_model,
 )
+from f1predictor.logging_utils import configure_logging, instrument_module_functions, logger
 from f1predictor.parameters import SimParams
 from f1predictor.public_apis import refresh_model_inputs_from_public_apis
 from f1predictor.report import latest_llm_analysis, latest_montecarlo_results, persist_llm_analysis, persist_montecarlo_results, render_report
@@ -65,6 +65,8 @@ def configure_page() -> None:
     Sets the page title, icon and wide layout, loads ``.env`` variables
     and injects application-level CSS styles.
     """
+    configure_logging()
+    logger.info("Configurando pagina Streamlit")
     st.set_page_config(page_title=APP_TITLE, page_icon="F1", layout="wide")
     load_dotenv()
     inject_style()
@@ -108,8 +110,7 @@ def render_copy_button(text: str, key: str) -> None:
     button_id = f"copy-llm-{key}"
     status_id = f"copy-llm-status-{key}"
     payload = json.dumps(text)
-    components.html(
-        f"""
+    iframe_html = f"""
         <div style="display:flex; justify-content:flex-end; margin:0 0 0.5rem 0;">
             <button
                 id="{button_id}"
@@ -136,7 +137,9 @@ def render_copy_button(text: str, key: str) -> None:
             }}
         }});
         </script>
-        """,
+        """
+    st.iframe(
+        iframe_html,
         height=42,
     )
 
@@ -150,6 +153,7 @@ def load_drivers_cached() -> pd.DataFrame:
     pd.DataFrame
         Cleaned driver seed table, cached across reruns.
     """
+    logger.info("Cargando pilotos base")
     return clean_drivers(load_drivers())
 
 
@@ -162,6 +166,7 @@ def load_calendar_cached() -> pd.DataFrame:
     pd.DataFrame
         Cleaned calendar seed table, cached across reruns.
     """
+    logger.info("Cargando calendario base")
     return clean_calendar(load_calendar())
 
 
@@ -191,6 +196,7 @@ def run_simulation_cached(
         Three DataFrames returned by ``simulate_many``: driver results,
         constructor results and per-race winner probabilities.
     """
+    logger.info("Preparando simulacion cacheada")
     drivers = clean_drivers(dataframe_from_csv_text(drivers_csv))
     calendar = clean_calendar(dataframe_from_csv_text(calendar_csv))
     return simulate_many(drivers, calendar, params)
@@ -845,3 +851,9 @@ def main() -> None:
     """
     configure_page()
     render_app()
+
+
+instrument_module_functions(
+    __name__,
+    skip=("load_drivers_cached", "load_calendar_cached", "run_simulation_cached"),
+)

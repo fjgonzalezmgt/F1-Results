@@ -9,6 +9,7 @@ import pandas as pd
 
 from f1predictor.config import RACE_POINTS, SPRINT_POINTS
 from f1predictor.data import clean_calendar, clean_drivers
+from f1predictor.logging_utils import instrument_module_functions, logger
 from f1predictor.parameters import SimParams
 
 
@@ -444,6 +445,13 @@ def simulate_many(
     clean_cal = clean_calendar(calendar)
     remaining = clean_cal.loc[(clean_cal["completed"] == 0) & (clean_cal["round"] >= params.start_round)].copy()
     rng = np.random.default_rng(params.seed)
+    logger.info(
+        "Monte Carlo iniciado: simulaciones={}, carreras_pendientes={}, pilotos={}, ronda_inicial={}",
+        params.simulations,
+        len(remaining),
+        len(clean_dr),
+        params.start_round,
+    )
 
     codes = clean_dr["code"].to_numpy()
     driver_names = clean_dr["driver"].to_numpy()
@@ -577,7 +585,14 @@ def simulate_many(
         session_points[finishing_order[:paying_positions]] = point_values[:paying_positions]
         return session_points, int(finishing_order[0])
 
-    for _ in range(params.simulations):
+    progress_interval = max(1, params.simulations // 10)
+    for simulation_index in range(params.simulations):
+        if simulation_index == 0 or (simulation_index + 1) % progress_interval == 0:
+            logger.info(
+                "Monte Carlo progreso: {}/{} simulaciones",
+                simulation_index + 1,
+                params.simulations,
+            )
         points = current_points.copy()
         team_points = base_team_points.copy()
         season_trend = rng.normal(0.0, params.development_drift, size=n_teams)
@@ -677,6 +692,7 @@ def simulate_many(
         ascending=False,
     )
     race_df = pd.DataFrame(race_rows).sort_values(["round", "win_pct"], ascending=[True, False])
+    logger.info("Monte Carlo terminado: {} pilotos, {} equipos", len(driver_df), len(constructor_df))
     return driver_df, constructor_df, race_df
 
 
@@ -833,3 +849,17 @@ def describe_driver(driver_code: str, drivers: pd.DataFrame) -> dict[str, Any]:
         "risk": round(100 - row["reliability"], 1),
         "form": round(row["recent_form"], 1),
     }
+
+
+instrument_module_functions(
+    __name__,
+    skip=(
+        "_center",
+        "_event_fit",
+        "_combine_strength",
+        "_form_scale_for_race",
+        "_regress_to_mean",
+        "_base_strength",
+        "_dnf_probability",
+    ),
+)
