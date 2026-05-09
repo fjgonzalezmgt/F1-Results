@@ -114,9 +114,6 @@
                   "Value": "'Resumen de fuerza por piloto'"
                 }
               }
-            },
-            "fontColor": {
-              "solid": {}
             }
           }
         }
@@ -137,9 +134,6 @@
                   "Value": "'Ordena y filtra para detectar favoritos por rating general, qualy, ritmo y forma reciente.'"
                 }
               }
-            },
-            "fontColor": {
-              "solid": {}
             }
           }
         }

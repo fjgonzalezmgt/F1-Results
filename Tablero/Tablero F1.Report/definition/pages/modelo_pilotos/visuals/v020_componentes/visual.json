@@ -209,9 +209,6 @@
                   "Value": "'Componentes del modelo'"
                 }
               }
-            },
-            "fontColor": {
-              "solid": {}
             }
           }
         }
@@ -232,9 +229,6 @@
                   "Value": "'Vista completa para comparar fortalezas: qualy, ritmo, consistencia, neumaticos, lluvia, racecraft, equipo y confiabilidad.'"
                 }
               }
-            },
-            "fontColor": {
-              "solid": {}
             }
           }
         }
