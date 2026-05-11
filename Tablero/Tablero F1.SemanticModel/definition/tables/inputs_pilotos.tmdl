@@ -3,24 +3,31 @@ table inputs_pilotos
 
 	measure 'Avg Driver Rating' = AVERAGE(inputs_pilotos[driver_rating])
 		formatString: 0.0
+		lineageTag: d2b1fe24-381c-4c6f-8d69-cc6f735bf1c3
 
 	measure 'Avg Qualifying' = AVERAGE(inputs_pilotos[qualifying])
 		formatString: 0.0
+		lineageTag: 7e41c4a3-c54a-4c2d-a6d7-c7bf7808eaf9
 
 	measure 'Avg Race Pace' = AVERAGE(inputs_pilotos[race_pace])
 		formatString: 0.0
+		lineageTag: 94cd6482-665d-4f31-bc18-13d1216ddc7d
 
 	measure 'Avg Consistency' = AVERAGE(inputs_pilotos[consistency])
 		formatString: 0.0
+		lineageTag: 1e04cf4b-b540-43b9-8b66-a3c1ab37c8e5
 
 	measure 'Avg Tyre Management' = AVERAGE(inputs_pilotos[tyre_management])
 		formatString: 0.0
+		lineageTag: d8e0894a-ca03-40e1-a844-3fbb2def9baa
 
 	measure 'Avg Wet Skill' = AVERAGE(inputs_pilotos[wet_skill])
 		formatString: 0.0
+		lineageTag: 7ca04684-f31a-41dc-ad91-13762db0c525
 
 	measure 'Avg Racecraft' = AVERAGE(inputs_pilotos[racecraft])
 		formatString: 0.0
+		lineageTag: 653f8672-0c55-4f25-ac8a-c2b4e76a6be5
 
 	column driver
 		dataType: string

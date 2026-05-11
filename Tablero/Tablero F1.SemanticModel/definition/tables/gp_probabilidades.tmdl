@@ -27,6 +27,7 @@ table gp_probabilidades
 
 	measure 'Prob Victoria Carrera' = DIVIDE(MAX(gp_probabilidades[win_pct]), 100)
 		formatString: 0.0%
+		lineageTag: 8c1ed07b-b989-4b69-b6cb-05d4a569fd40
 
 	column round
 		dataType: int64

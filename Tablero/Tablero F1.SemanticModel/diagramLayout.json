@@ -1,0 +1,100 @@
+{
+  "version": "1.1.0",
+  "diagrams": [
+    {
+      "ordinal": 0,
+      "scrollPosition": {
+        "x": 260,
+        "y": 0
+      },
+      "nodes": [
+        {
+          "location": {
+            "x": 792.4562790182506,
+            "y": 303.67305674052142
+          },
+          "nodeIndex": "constructores",
+          "nodeLineageTag": "f874a2a1-eeaa-4f2a-818e-cb9232e0af88",
+          "size": {
+            "height": 300,
+            "width": 234
+          },
+          "zIndex": 0
+        },
+        {
+          "location": {
+            "x": 335.03958815010105,
+            "y": 336.56147066105063
+          },
+          "nodeIndex": "gp_probabilidades",
+          "nodeLineageTag": "d6955d39-c272-4e3c-97c7-cb1e221713fb",
+          "size": {
+            "height": 300,
+            "width": 234
+          },
+          "zIndex": 0
+        },
+        {
+          "location": {
+            "x": 50,
+            "y": 336.95438464057582
+          },
+          "nodeIndex": "inputs_calendario",
+          "nodeLineageTag": "59b97bdd-48a0-4338-bdd4-69ca9a896ec7",
+          "size": {
+            "height": 300,
+            "width": 234
+          },
+          "zIndex": 0
+        },
+        {
+          "location": {
+            "x": 978.71182088264936,
+            "y": -50
+          },
+          "nodeIndex": "inputs_pilotos",
+          "nodeLineageTag": "bf83edb8-19af-4294-954f-d7268e672691",
+          "size": {
+            "height": 300,
+            "width": 234
+          },
+          "zIndex": 0
+        },
+        {
+          "location": {
+            "x": 1212.7118208826494,
+            "y": 243.47719232028794
+          },
+          "nodeIndex": "parametros",
+          "nodeLineageTag": "77289990-a9d9-4e11-bf3a-ab0bd072a15e",
+          "size": {
+            "height": 200,
+            "width": 234
+          },
+          "zIndex": 0
+        },
+        {
+          "location": {
+            "x": 505.5094039106994,
+            "y": -17.128340514230558
+          },
+          "nodeIndex": "pilotos",
+          "nodeLineageTag": "591ce774-5177-4ac7-a5de-5726569b09f6",
+          "size": {
+            "height": 300,
+            "width": 234
+          },
+          "zIndex": 0
+        }
+      ],
+      "name": "All tables",
+      "zoomValue": 100,
+      "pinKeyFieldsToTop": false,
+      "showExtraHeaderInfo": false,
+      "hideKeyFieldsWhenCollapsed": false,
+      "tablesLocked": false
+    }
+  ],
+  "selectedDiagram": "All tables",
+  "defaultDiagram": "All tables"
+}

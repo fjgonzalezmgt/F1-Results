@@ -1,51 +1,59 @@
-# F1 Championship Lab 🏎️
+# F1 Championship Lab
 
-> **Autor:** Francisco Gonzalez — Quality Analytics
+> **Autor:** Francisco Gonzalez - Quality Analytics
 
 ![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white)
-![Streamlit](https://img.shields.io/badge/Streamlit-1.x-FF4B4B?logo=streamlit&logoColor=white)
-![NumPy](https://img.shields.io/badge/NumPy-vectorised-013243?logo=numpy&logoColor=white)
-![Pandas](https://img.shields.io/badge/Pandas-2.x-150458?logo=pandas&logoColor=white)
+![Streamlit](https://img.shields.io/badge/Streamlit-1.56%2B-FF4B4B?logo=streamlit&logoColor=white)
+![NumPy](https://img.shields.io/badge/NumPy-1.26%2B-013243?logo=numpy&logoColor=white)
+![Pandas](https://img.shields.io/badge/Pandas-2.2%2B-150458?logo=pandas&logoColor=white)
 ![SciPy](https://img.shields.io/badge/SciPy-1.12%2B-8CAAE6?logo=scipy&logoColor=white)
-![Plotly](https://img.shields.io/badge/Plotly-interactive-3F4F75?logo=plotly&logoColor=white)
-![OpenAI](https://img.shields.io/badge/OpenAI-web__search-412991?logo=openai&logoColor=white)
+![Plotly](https://img.shields.io/badge/Plotly-5.22%2B-3F4F75?logo=plotly&logoColor=white)
+![OpenAI](https://img.shields.io/badge/OpenAI-Responses_API-412991?logo=openai&logoColor=white)
+![Loguru](https://img.shields.io/badge/Loguru-logging-222222)
 ![Conda](https://img.shields.io/badge/Conda-environment-44A833?logo=anaconda&logoColor=white)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
-Aplicacion Streamlit para simular el campeonato de Formula 1 desde 2026 en adelante, tomando la fecha en curso como referencia para determinar carreras disputadas y pendientes. Combina un motor Monte Carlo vectorizado, un modelo piloto/constructor multivariable, caracteristicas por circuito y una capa LLM que actualiza datos en vivo, busca contexto de carrera y convierte probabilidades en analisis narrativo.
+Aplicación Streamlit para simular un campeonato de Fórmula 1 desde la temporada actual. Combina un motor Monte Carlo vectorizado, ratings editables de pilotos y constructores, características de circuito, actualización con APIs públicas y una capa LLM para búsqueda contextual, análisis narrativo y consulta de fuentes oficiales.
+
+El proyecto también incluye salida persistente a Excel/PDF, bitácora con Loguru y un tablero Power BI (`Tablero/`) para explotar los resultados generados.
+
+> Ver el tablero en línea: https://app.powerbi.com/view?r=eyJrIjoiN2ZlMjE5MmYtNDZjZi00NjdhLWJmMzAtYjNiOGJmN2U1MDM0IiwidCI6IjVkMjFhNmQ1LWIzODMtNGUxMi1hYjFiLTY3YTUxNWZmM2RhOCIsImMiOjR9
 
 ---
 
-## Indice
+## Índice
 
-- [Que hace](#que-hace)
+- [Qué hace](#qué-hace)
 - [Arquitectura](#arquitectura)
-- [Motor de simulacion](#motor-de-simulacion)
+- [Motor de simulación](#motor-de-simulación)
 - [Flujo de datos](#flujo-de-datos)
-- [Instalacion y uso](#instalacion-y-uso)
+- [Instalación y uso](#instalación-y-uso)
+- [Variables de entorno](#variables-de-entorno)
 - [Flujo recomendado](#flujo-recomendado)
-- [Parametros del modelo](#parametros-del-modelo)
+- [Parámetros del modelo](#parámetros-del-modelo)
+- [Salidas generadas](#salidas-generadas)
 - [Estructura del proyecto](#estructura-del-proyecto)
-- [Por que este enfoque](#por-que-este-enfoque)
 - [Fuentes principales](#fuentes-principales)
 
 ---
 
-## Que hace
+## Qué hace
 
-| Componente | Descripcion |
+| Componente | Descripción |
 |---|---|
-| **Monte Carlo de temporada** | Corre `N` simulaciones completas desde la ronda elegida; estima probabilidad de titulo, top 3, top 6 y puntos esperados para cada piloto y constructor. |
-| **Modelo piloto/constructor** | Combina 13 ratings por piloto (habilidad, clasificacion, ritmo, consistencia, neumaticos, lluvia, racecraft…) con 5 atributos de equipo (ritmo, chasis, motor, estrategia, fiabilidad). |
-| **Circuitos** | Cada GP modifica el modelo segun carga aerodinamica, potencia, degradacion, dificultad de adelantamiento, riesgo de clima y safety car, e importancia de clasificacion. |
-| **Sprints** | Suma puntos de los sprints pendientes de forma configurable desde la barra lateral. |
-| **Escenarios** | Calcula variantes Conservador / Base / Agresivo modificando forma, parrilla, caos e incertidumbre para comparar rangos de probabilidad de titulo. |
-| **Diagnostico** | Tabla de explicabilidad que descompone fuerza piloto, fuerza constructora, forma efectiva, fit de circuito y ruido de carrera para los principales candidatos al titulo. |
-| **APIs publicas** | El boton *Actualizar info* consulta Jolpica/Ergast y OpenF1, usa temporadas historicas como prior, recalibra ratings con resultados reales y guarda CSV en disco. |
-| **Formula1.com via LLM** | El boton *Actualizar F1.com con LLM* usa `web_search` de OpenAI restringido a Formula1.com para line-up, standings y calendario oficial. |
-| **LLM de contexto** | Busca noticias del proximo GP (clima, parrilla, upgrades, sanciones) y genera un veredicto narrativo sobre pilotos, constructores y escenarios. |
-| **Datos editables y persistentes** | Pilotos y calendario viven en CSV editables desde la app; cualquier actualizacion los sobreescribe en disco. |
-| **Reporte PDF** | El boton *Guardar reporte* exporta un informe LaTeX/PDF con graficos Plotly, tabla de resultados Monte Carlo y el analisis LLM persistido; guarda ademas un Excel con todas las hojas de resultados. Requiere `pdflatex` en el PATH. |
+| **Monte Carlo de temporada** | Corre `N` simulaciones completas desde la ronda elegida; estima probabilidad de título, top 3, top 6 y puntos esperados para pilotos y constructores. |
+| **Modelo piloto/constructor** | Combina 13 ratings por piloto con atributos de equipo: ritmo, chasis, unidad de potencia, estrategia, fiabilidad y forma reciente. |
+| **Circuitos** | Cada GP ajusta el rendimiento según carga aerodinámica, potencia, estrés de neumáticos, dificultad de adelantamiento, riesgo climático, safety car e importancia de clasificación. |
+| **Sprints** | Asigna puntos de sprint pendientes cuando el parámetro `include_sprints` está activo. |
+| **Escenarios e incertidumbre** | Permite controlar caos de carrera, fiabilidad, clima, safety car, deriva de desarrollo e incertidumbre del paquete por equipo. |
+| **Diagnóstico** | Descompone probabilidades en fuerza del piloto, fuerza del auto, clasificación, forma regresada, ajuste de pista, ruido de carrera e incertidumbre. |
+| **Datos editables** | Pilotos y calendario viven en CSV y pueden editarse desde la app con `st.data_editor`. |
+| **Actualización por APIs** | Consulta Jolpica-F1/Ergast y OpenF1, cachea JSON en `data/cache/`, recalibra inputs y guarda los CSV actualizados. |
+| **Búsqueda F1 con LLM** | Usa OpenAI Responses API con `web_search` para consultar fuentes confiables de F1 y actualizar standings, line-up o calendario. |
+| **Análisis narrativo** | Genera contexto del próximo GP y un veredicto LLM sobre pilotos, constructores, riesgos y escenarios. |
+| **Reporte** | Exporta resultados Monte Carlo a Excel y genera un informe LaTeX/PDF con gráficos Plotly y el análisis LLM persistido. |
+| **Logging** | Registra ejecución, tiempos y excepciones con Loguru en `resultados/app.log`. |
+| **Power BI** | Incluye un proyecto `.pbip` en `Tablero/` para visualizar los resultados producidos por la simulación. |
 
 ---
 
@@ -53,74 +61,83 @@ Aplicacion Streamlit para simular el campeonato de Formula 1 desde 2026 en adela
 
 ```mermaid
 graph TD
-    subgraph Datos["📂 Capa de datos"]
-        CSV_D[drivers_seed.csv]
-        CSV_C[calendar_seed.csv]
-        CACHE[data/cache/*.json]
+    subgraph Datos["Capa de datos"]
+        CSV_D["data/drivers_seed.csv"]
+        CSV_C["data/calendar_seed.csv"]
+        CACHE["data/cache/*.json"]
     end
 
-    subgraph APIs["🌐 APIs externas"]
-        JOLPICA[Jolpica-F1 / Ergast]
-        OPENF1[OpenF1]
-        F1COM[Formula1.com via LLM]
+    subgraph APIs["APIs externas"]
+        JOLPICA["Jolpica-F1 / Ergast"]
+        OPENF1["OpenF1"]
+        F1WEB["Fuentes F1 via OpenAI web_search"]
     end
 
-    subgraph Core["⚙️ Nucleo Python — f1predictor/"]
-        CONFIG[config.py\nConstantes globales]
-        DATA[data.py\nCarga · Validacion · Limpieza]
-        PARAMS[parameters.py\nSimParams dataclass]
-        PUBAPI[public_apis.py\nIngesta y calibracion]
-        SIM[simulator.py\nMonte Carlo vectorizado]
-        LLM[llm.py\nOpenAI Responses API]
-        REPORT[report.py\nLaTeX · PDF · Excel]
-        UI[ui.py\nStreamlit widgets y cache]
+    subgraph Core["Núcleo Python - f1predictor/"]
+        CONFIG["config.py<br/>Paths, URLs, puntos y colores"]
+        DATA["data.py<br/>Carga, validación, limpieza y merge"]
+        PARAMS["parameters.py<br/>SimParams"]
+        PUBAPI["public_apis.py<br/>Ingesta, cache y calibración"]
+        SIM["simulator.py<br/>Monte Carlo vectorizado"]
+        LLM["llm.py<br/>Responses API y web_search"]
+        REPORT["report.py<br/>Excel, LaTeX, PDF y figuras"]
+        LOGS["logging_utils.py<br/>Loguru e instrumentación"]
+        UI["ui.py<br/>Streamlit, widgets y caché"]
     end
 
-    subgraph App["🖥️ Aplicacion"]
-        STREAMLIT[app.py → streamlit run]
+    subgraph App["Aplicación"]
+        ENTRY["app.py"]
+        STREAMLIT["streamlit run app.py"]
     end
 
-    CSV_D & CSV_C -->|load / clean| DATA
+    CSV_D & CSV_C --> DATA
     DATA --> UI
-    JOLPICA & OPENF1 -->|HTTP + cache JSON| PUBAPI
-    F1COM -->|web_search JSON| LLM
-    PUBAPI -->|PublicApiResult| UI
-    LLM -->|DataFrames actualizados| UI
-    DATA -->|DataFrames limpios| SIM
+    JOLPICA & OPENF1 --> PUBAPI
+    PUBAPI --> CACHE
+    PUBAPI --> UI
+    F1WEB --> LLM
+    LLM --> UI
     PARAMS --> SIM
-    SIM -->|driver_df / constructor_df / race_df| UI
-    LLM -->|analisis narrativo| UI
-    SIM & LLM -->|resultados + analisis| REPORT
-    REPORT -->|PDF · xlsx| UI
-    CONFIG -.->|constantes| DATA & PUBAPI & SIM & LLM & REPORT & UI
-    UI --> STREAMLIT
+    DATA --> SIM
+    SIM --> UI
+    SIM & LLM --> REPORT
+    CONFIG --> DATA
+    CONFIG --> PUBAPI
+    CONFIG --> SIM
+    CONFIG --> LLM
+    CONFIG --> REPORT
+    LOGS --> UI
+    UI --> ENTRY
+    ENTRY --> STREAMLIT
 ```
 
 ---
 
-## Motor de simulacion
+## Motor de simulación
 
-Cada iteracion Monte Carlo ejecuta el siguiente pipeline por carrera pendiente:
+Cada iteración Monte Carlo evalúa las carreras pendientes con este flujo:
 
 ```mermaid
 flowchart LR
-    A([Inicio iteracion]) --> B[Calcular fuerza base\npiloto + constructor + forma]
-    B --> C[Ajuste por circuito\ndownforce · power · tyres\nracecraft · strategy]
-    C --> D{¿Lluvia?}
-    D -- Si --> E[Bonus wet_skill]
-    D -- No --> F[Sin ajuste]
-    E & F --> G[Clasificacion\n+ ruido gaussiano]
-    G --> H[Grid bonus\nsegun qualifying_importance]
-    H --> I{¿Safety car?}
-    I -- Si --> J[Ruido extra\n+ bonus strategy]
-    I -- No --> K[Sin ajuste]
-    J & K --> L[Ruido de carrera\nsegun consistency]
-    L --> M{¿DNF?\nfiabilidad × estres pista}
-    M -- Si --> N[Score = -999]
-    M -- No --> O[Score final]
-    N & O --> P[Ordenar finishing order]
-    P --> Q[Asignar puntos\nF1 o Sprint]
-    Q --> R([Siguiente carrera])
+    A([Inicio]) --> B["Fuerza base<br/>piloto + constructor + forma"]
+    B --> C["Ajuste por circuito<br/>downforce, power, tyres, racecraft, strategy"]
+    C --> D{"¿Lluvia?"}
+    D -- Sí --> E["Bonus wet_skill"]
+    D -- No --> F["Sin ajuste climático"]
+    E --> G
+    F --> G
+    G["Clasificación<br/>rating + ruido"] --> H["Grid bonus<br/>según qualifying_importance"]
+    H --> I{"¿Safety car?"}
+    I -- Sí --> J["Ruido adicional<br/>+ estrategia"]
+    I -- No --> K["Ruido normal"]
+    J --> L
+    K --> L
+    L["Ritmo de carrera<br/>consistencia + caos"] --> M{"¿DNF?"}
+    M -- Sí --> N["Score = -999"]
+    M -- No --> O["Score final"]
+    N --> P
+    O --> P
+    P["Orden final"] --> Q["Puntos F1 o sprint"]
 ```
 
 ---
@@ -133,40 +150,44 @@ sequenceDiagram
     participant UI as ui.py
     participant PUB as public_apis.py
     participant LLM as llm.py
-    participant DATA as data.py
     participant SIM as simulator.py
+    participant REP as report.py
 
-    Usuario->>UI: Pulsa "Actualizar APIs publicas"
+    Usuario->>UI: Edita pilotos/calendario
+    Usuario->>UI: Pulsa Actualizar info (APIs públicas)
     UI->>PUB: refresh_model_inputs_from_public_apis()
-    PUB->>PUB: fetch Jolpica schedule / standings / results / qualifying
-    PUB->>PUB: fetch OpenF1 weather + race_control
-    PUB->>DATA: clean_drivers() + clean_calendar()
-    PUB-->>UI: PublicApiResult (drivers, calendar, summary, errors)
-    UI->>UI: Guarda CSV en disco
+    PUB->>PUB: Jolpica standings, resultados, sprints y quali
+    PUB->>PUB: OpenF1 clima, race control y session results
+    PUB-->>UI: drivers, calendar, summary, sources, errors
+    UI->>UI: Guarda drivers_seed.csv y calendar_seed.csv
 
-    Usuario->>UI: Pulsa "Simular campeonato"
-    UI->>DATA: dataframe_from_csv_text()
-    DATA-->>UI: drivers_df + calendar_df
+    Usuario->>UI: Pulsa Simular campeonato
     UI->>SIM: simulate_many(drivers, calendar, params)
     SIM-->>UI: driver_df, constructor_df, race_df
+    UI->>REP: persist_montecarlo_results()
+    REP-->>UI: resultados/resultados_montecarlo.xlsx
 
-    Usuario->>UI: Pulsa "Generar analisis LLM"
-    UI->>LLM: build_analysis_payload()
-    LLM->>LLM: call_llm_analysis() → OpenAI API
-    LLM-->>UI: texto narrativo
-    UI-->>Usuario: Muestra analisis con boton Copiar
+    Usuario->>UI: Genera análisis LLM
+    UI->>LLM: build_analysis_payload() + call_llm_analysis()
+    LLM-->>UI: Markdown narrativo
+    UI->>REP: persist_llm_analysis()
+
+    Usuario->>UI: Guarda reporte
+    UI->>REP: render_report()
+    REP-->>UI: reporte/reporte_f1.pdf
 ```
 
 ---
 
-## Instalacion y uso
+## Instalación y uso
 
 ### Requisitos previos
 
-- [Miniconda](https://docs.conda.io/en/latest/miniconda.html) o Anaconda
-- Python 3.11+
+- Miniconda o Anaconda
+- Python 3.11
+- Para PDF: una instalación LaTeX con `pdflatex` disponible en el `PATH`
 
-### Instalacion
+### Opción Conda
 
 ```powershell
 conda env create -f environment.yml
@@ -174,123 +195,152 @@ conda activate f1predictor
 streamlit run app.py
 ```
 
-### Variables de entorno (opcional — para LLM)
+### Opción pip
 
-Crea un archivo `.env` en la raiz del proyecto:
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+streamlit run app.py
+```
+
+También puedes ejecutar `run_app.bat` en Windows.
+
+---
+
+## Variables de entorno
+
+Crea un archivo `.env` en la raíz del proyecto para habilitar funciones LLM:
 
 ```dotenv
 OPENAI_API_KEY=tu_clave_aqui
 OPENAI_MODEL=gpt-4o
 ```
 
-> Sin `OPENAI_API_KEY` la app funciona completamente; los botones LLM quedan deshabilitados.
+Variables opcionales de logging:
+
+```dotenv
+F1PREDICTOR_LOG_LEVEL=INFO
+F1PREDICTOR_FILE_LOG_LEVEL=DEBUG
+```
+
+Sin `OPENAI_API_KEY`, la simulación, edición de datos, APIs públicas y exportación de resultados siguen funcionando; solo quedan deshabilitadas las funciones LLM.
 
 ---
 
 ## Flujo recomendado
 
-```mermaid
-flowchart TD
-    A([Abrir la app]) --> B[Revisar / editar\npilotos y calendario]
-    B --> C{¿Actualizar datos?}
-    C -- APIs publicas --> D[Pulsar Actualizar info\nJolpica + OpenF1]
-    C -- Formula1.com --> E[Pulsar Actualizar F1.com\nweb_search LLM]
-    C -- No --> F
-    D & E --> F[Ajustar pesos e\nincertidumbre en sidebar]
-    F --> G[Pulsar Simular campeonato]
-    G --> H[Explorar tabs\nPilotos · Constructores · GP\nEscenarios · Diagnostico]
-    H --> I{¿Analisis LLM?}
-    I -- Si --> J[Buscar contexto GP\nGenerar analisis]
-    I -- No --> K([Fin])
-    J --> K
-```
+1. Abrir la app con `streamlit run app.py`.
+2. Revisar o editar `Pilotos` y `Calendario`.
+3. Actualizar inputs con `Actualizar info (APIs públicas)` o `Búsqueda profunda F1 con LLM`.
+4. Ajustar pesos e incertidumbre en la barra lateral.
+5. Pulsar `Simular campeonato`.
+6. Revisar pestañas de pilotos, constructores, carreras, diagnóstico y modelo.
+7. Buscar contexto del próximo GP y generar análisis LLM si hay API key.
+8. Guardar el reporte para producir PDF, Excel, figuras y Markdown.
 
 ---
 
-## Parametros del modelo
+## Parámetros del modelo
 
-### Pesos de fuerza
+### Motor
 
-| Parametro | Rango | Default | Descripcion |
-|---|---|---|---|
-| `driver_weight` | 0.10 – 0.80 | **0.42** | Peso de habilidad del piloto en la fuerza base |
-| `constructor_weight` | 0.10 – 0.80 | **0.48** | Peso del equipo (chasis + motor + estrategia) |
-| `form_weight` | 0.00 – 0.30 | **0.06** | Peso inicial de la forma reciente |
-| `form_decay_races` | 0.5 – 8.0 | **2.5** | Duracion de la forma reciente antes de diluirse |
-| `qualifying_weight` | 0.20 – 1.20 | **0.72** | Cuanto arrastra la posicion de parrilla al ritmo de carrera |
+| Parámetro | Default | Descripción |
+|---|---:|---|
+| `simulations` | `4000` | Iteraciones Monte Carlo. |
+| `seed` | Año actual | Semilla reproducible de NumPy. |
+| `start_round` | `4` | Primera ronda simulada hacia adelante. |
+| `include_sprints` | `True` | Incluye puntos de sprints pendientes. |
+
+### Pesos
+
+| Parámetro | Rango | Default | Descripción |
+|---|---:|---:|---|
+| `driver_weight` | 0.10-0.80 | 0.42 | Peso de habilidad del piloto. |
+| `constructor_weight` | 0.10-0.80 | 0.48 | Peso del equipo. |
+| `form_weight` | 0.00-0.30 | 0.06 | Peso inicial de forma reciente. |
+| `form_decay_races` | 0.5-8.0 | 2.5 | Carreras sobre las que se diluye la forma. |
+| `qualifying_weight` | 0.20-1.20 | 0.72 | Arrastre de clasificación a ritmo de carrera. |
 
 ### Incertidumbre
 
-| Parametro | Rango | Default | Descripcion |
-|---|---|---|---|
-| `chaos` | 1.0 – 14.0 | **5.5** | Desviacion estandar del ruido de carrera |
-| `reliability_multiplier` | 0.4 – 2.4 | **1.0** | Escala todas las probabilidades de abandono |
-| `weather_multiplier` | 0.3 – 2.5 | **1.0** | Escala la probabilidad de sesion mojada |
-| `safety_car_multiplier` | 0.3 – 2.5 | **1.0** | Escala la probabilidad de safety car |
-| `development_drift` | 0.0 – 8.0 | **2.4** | Deriva de desarrollo de equipo a lo largo de la temporada |
-| `team_uncertainty` | 0.0 – 10.0 | **6.0** | Incertidumbre persistente del paquete de cada equipo |
+| Parámetro | Rango | Default | Descripción |
+|---|---:|---:|---|
+| `chaos` | 1.0-14.0 | 5.5 | Ruido de carrera. |
+| `reliability_multiplier` | 0.4-2.4 | 1.0 | Escala de abandonos. |
+| `weather_multiplier` | 0.3-2.5 | 1.0 | Escala de sesiones mojadas. |
+| `safety_car_multiplier` | 0.3-2.5 | 1.0 | Escala de safety car. |
+| `development_drift` | 0.0-8.0 | 2.4 | Deriva de desarrollo durante la temporada. |
+| `team_uncertainty` | 0.0-10.0 | 6.0 | Incertidumbre persistente del paquete por equipo. |
 
-### Ratings de piloto (1 – 100)
+### Ratings de piloto y equipo
 
-`driver_rating` · `qualifying` · `race_pace` · `consistency` · `tyre_management` · `wet_skill` · `racecraft` · `team_pace` · `chassis` · `power_unit` · `strategy` · `reliability` · `recent_form`
+`driver_rating`, `qualifying`, `race_pace`, `consistency`, `tyre_management`, `wet_skill`, `racecraft`, `team_pace`, `chassis`, `power_unit`, `strategy`, `reliability`, `recent_form`.
+
+---
+
+## Salidas generadas
+
+| Archivo / carpeta | Descripción |
+|---|---|
+| `resultados/resultados_montecarlo.xlsx` | Resultados de pilotos, constructores y probabilidades por GP. |
+| `resultados/analisis_llm.md` | Último análisis narrativo generado por LLM. |
+| `resultados/app.log` | Bitácora de ejecución con Loguru. |
+| `reporte/reporte_f1.pdf` | Reporte final compilado con LaTeX. |
+| `reporte/reporte_f1.tex` | TeX generado desde la plantilla. |
+| `figs/*.png` | Gráficos Plotly exportados para el reporte. |
+| `data/cache/*.json` | Respuestas cacheadas de Jolpica/OpenF1. |
 
 ---
 
 ## Estructura del proyecto
 
-```
+```text
 F1 Results/
-├── app.py                    # Entry point: streamlit run app.py
-├── environment.yml           # Entorno Conda
-├── requirements.txt          # Dependencias pip
-├── .env                      # (no versionado) OPENAI_API_KEY
+├── app.py                         # Entry point: streamlit run app.py
+├── environment.yml                # Entorno Conda
+├── requirements.txt               # Dependencias pip
+├── run_app.bat                    # Lanzador Windows
+├── .env                           # No versionado: OPENAI_API_KEY, logging, modelo
 │
 ├── data/
-│   ├── drivers_seed.csv      # Ratings y puntos actuales de pilotos
-│   ├── calendar_seed.csv     # Calendario con features de circuito
-│   └── cache/                # Respuestas JSON cacheadas de APIs
+│   ├── drivers_seed.csv           # Ratings y puntos actuales de pilotos
+│   ├── calendar_seed.csv          # Calendario con features de circuito
+│   └── cache/                     # Respuestas JSON cacheadas
 │
 ├── docs/
-│   └── research_f1_models.md # Sintesis de modelos e investigacion
+│   └── research_f1_models.md      # Síntesis de investigación y modelos F1
 │
 ├── resultados/
-│   ├── analisis_llm.md       # Ultimo analisis LLM persistido
-│   └── resultados_montecarlo.xlsx  # Ultimo Excel de resultados
+│   ├── analisis_llm.md            # Último análisis LLM
+│   ├── resultados_montecarlo.xlsx # Último Excel de simulación
+│   └── app.log                    # Logs de aplicación
 │
 ├── reporte/
-│   ├── reporte_f1_template.tex  # Plantilla LaTeX del informe
-│   ├── reporte_f1.tex           # TeX renderizado (generado)
-│   └── reporte_f1.pdf           # PDF compilado (generado)
+│   ├── reporte_f1_template.tex    # Plantilla LaTeX
+│   ├── reporte_f1.tex             # TeX generado
+│   └── reporte_f1.pdf             # PDF generado
 │
-├── figs/                     # Graficos Plotly exportados para el reporte
+├── figs/                          # Gráficos exportados
+│
+├── Tablero/
+│   ├── Tablero F1.pbip            # Proyecto Power BI
+│   ├── IMAGE_ATTRIBUTION.md       # Créditos de imágenes
+│   ├── Tablero F1.Report/         # Definición del reporte
+│   └── Tablero F1.SemanticModel/  # Modelo semántico
 │
 └── f1predictor/
     ├── __init__.py
-    ├── config.py             # Constantes: paths, URLs, puntos, colores
-    ├── data.py               # Carga, validacion, limpieza y merge de datos
-    ├── parameters.py         # SimParams: dataclass congelado con todos los controles
-    ├── public_apis.py        # Ingesta Jolpica-F1 + OpenF1, calibracion de ratings
-    ├── simulator.py          # Motor Monte Carlo vectorizado con NumPy
-    ├── llm.py                # Integracion OpenAI Responses API (web_search + analisis)
-    ├── report.py             # Generacion LaTeX/PDF y exportacion Excel de resultados
-    └── ui.py                 # Streamlit: sidebar, editores, graficos, LLM panel
+    ├── config.py                  # Constantes, paths, URLs, puntos, colores
+    ├── data.py                    # Carga, validación, limpieza y actualización
+    ├── logging_utils.py           # Configuración Loguru e instrumentación
+    ├── parameters.py              # SimParams
+    ├── public_apis.py             # Jolpica/OpenF1, cache y calibración
+    ├── simulator.py               # Motor Monte Carlo
+    ├── llm.py                     # OpenAI Responses API
+    ├── report.py                  # Excel, figuras, LaTeX y PDF
+    └── ui.py                      # Interfaz Streamlit
 ```
-
----
-
-## Por que este enfoque
-
-La investigacion publica en F1 muestra que el constructor explica una fraccion dominante del resultado final, pero que clasificacion, circuito, clima, fiabilidad y el contexto especifico del fin de semana pueden cambiar sustancialmente el pronostico.
-
-Este proyecto no intenta fingir precision de telemetria:
-
-- **Transparente** — cada rating es un CSV editable; el modelo no tiene caja negra.
-- **Calibrable** — los pesos y multiplicadores son sliders en tiempo real.
-- **Actualizable** — dos botones traen datos reales (APIs REST y Formula1.com via LLM).
-- **Narrativo** — el LLM convierte numeros en veredictos accionables.
-- **Documentado** — todas las funciones siguen convencion NumPy docstring para facilitar la lectura del codigo y la generacion de documentacion.
-
-La sintesis completa de modelos existentes, variables usadas y metodologia esta en [docs/research_f1_models.md](docs/research_f1_models.md).
 
 ---
 
@@ -298,10 +348,12 @@ La sintesis completa de modelos existentes, variables usadas y metodologia esta 
 
 | Fuente | URL |
 |---|---|
-| F1 drivers | https://www.formula1.com/en/drivers |
-| F1 standings | https://www.formula1.com/en/results |
-| F1 calendar | https://www.formula1.com/en/racing |
+| Formula 1 drivers | https://www.formula1.com/en/drivers |
+| Formula 1 results | https://www.formula1.com/en/results |
+| Formula 1 calendar | https://www.formula1.com/en/racing |
 | Jolpica F1 API | https://github.com/jolpica/jolpica-f1 |
-| FastF1 | https://docs.fastf1.dev/ |
 | OpenF1 | https://openf1.org/docs/ |
+| FastF1 | https://docs.fastf1.dev/ |
 | OpenAI web search | https://platform.openai.com/docs/guides/tools-web-search?api-mode=responses |
+
+La justificación metodológica del enfoque está documentada en [`docs/research_f1_models.md`](docs/research_f1_models.md).
