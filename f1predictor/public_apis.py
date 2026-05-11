@@ -12,6 +12,7 @@ import math
 import time
 import unicodedata
 from dataclasses import dataclass, field
+from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Any
 from urllib.error import HTTPError, URLError
@@ -33,11 +34,26 @@ from f1predictor.logging_utils import instrument_module_functions, logger
 
 REQUEST_TIMEOUT_SECONDS = 20
 HTTP_HEADERS = {"User-Agent": "f1-championship-lab/1.0"}
+CURRENT_SEASON_CACHE_SECONDS = 900
 
 
 @dataclass
 class PublicApiResult:
-    """Normalized output from the public API refresh flow."""
+    """Normalized output from the public API refresh flow.
+
+    Attributes
+    ----------
+    drivers : pd.DataFrame
+        Updated, cleaned driver input table.
+    calendar : pd.DataFrame
+        Updated, cleaned calendar input table.
+    summary : list[str]
+        Human-readable messages describing successful refresh steps.
+    sources : list[str]
+        Source endpoint URLs used during the refresh.
+    errors : list[str]
+        Non-fatal errors or warnings collected during the refresh.
+    """
 
     drivers: pd.DataFrame
     calendar: pd.DataFrame
@@ -48,6 +64,23 @@ class PublicApiResult:
 
 class PublicApiError(RuntimeError):
     """Raised when an upstream public API response cannot be used."""
+
+
+def _jolpica_cache_ttl(season: int) -> int | None:
+    """Return a cache TTL for Jolpica data based on season freshness.
+
+    Parameters
+    ----------
+    season : int
+        F1 season year requested from Jolpica.
+
+    Returns
+    -------
+    int or None
+        Short TTL in seconds for the current or future season; ``None`` for
+        historical seasons so existing cache files can be reused indefinitely.
+    """
+    return CURRENT_SEASON_CACHE_SECONDS if season >= date.today().year else None
 
 
 def _normalize_text(value: Any) -> str:
@@ -122,7 +155,8 @@ def _request_json(
     path: str,
     params: dict[str, Any] | None = None,
     cache_name: str | None = None,
-    ttl_seconds: int = 900,
+    ttl_seconds: int | None = 900,
+    not_found_as_empty: bool = False,
 ) -> dict[str, Any] | list[dict[str, Any]]:
     """Make an HTTP GET request and return the parsed JSON payload.
 
@@ -141,6 +175,10 @@ def _request_json(
         Filename for the on-disk JSON cache; caching is skipped if ``None``.
     ttl_seconds : int, optional
         Maximum age (seconds) of a valid cached response. Default is 900.
+        Use ``None`` to reuse the cache whenever the file exists.
+    not_found_as_empty : bool, optional
+        Return an empty list instead of raising on HTTP 404. Use only for
+        optional list endpoints where "no data yet" is an expected response.
 
     Returns
     -------
@@ -163,7 +201,7 @@ def _request_json(
     if cache_name:
         CACHE_DIR.mkdir(parents=True, exist_ok=True)
         cache_path = CACHE_DIR / cache_name
-        if cache_path.exists() and time.time() - cache_path.stat().st_mtime <= ttl_seconds:
+        if cache_path.exists() and (ttl_seconds is None or time.time() - cache_path.stat().st_mtime <= ttl_seconds):
             logger.info("API cache vigente: {}", cache_path)
             return json.loads(cache_path.read_text(encoding="utf-8"))
 
@@ -176,6 +214,10 @@ def _request_json(
                 payload = json.loads(response.read().decode("utf-8"))
             break
         except HTTPError as exc:
+            if exc.code == 404 and not_found_as_empty:
+                logger.info("API sin datos publicados todavia: {}", url)
+                payload = []
+                break
             if exc.code in retryable_statuses and attempt < 3:
                 retry_after = exc.headers.get("Retry-After")
                 try:
@@ -207,7 +249,7 @@ def _jolpica_json(
     path: str,
     params: dict[str, Any] | None = None,
     cache_name: str | None = None,
-    ttl_seconds: int = 900,
+    ttl_seconds: int | None = None,
 ) -> dict[str, Any]:
     """Fetch a Jolpica-F1 endpoint and validate the MRData envelope.
 
@@ -219,8 +261,9 @@ def _jolpica_json(
         Additional query parameters.
     cache_name : str or None, optional
         Filename for the on-disk cache.
-    ttl_seconds : int, optional
-        Cache TTL in seconds. Default is 900.
+    ttl_seconds : int or None, optional
+        Cache TTL in seconds. Default is ``None`` so an existing Jolpica
+        cache file is reused without another API call.
 
     Returns
     -------
@@ -242,7 +285,8 @@ def _openf1_json(
     path: str,
     params: dict[str, Any] | None = None,
     cache_name: str | None = None,
-    ttl_seconds: int = 900,
+    ttl_seconds: int | None = 900,
+    not_found_as_empty: bool = False,
 ) -> list[dict[str, Any]]:
     """Fetch an OpenF1 endpoint and validate the list response.
 
@@ -254,8 +298,11 @@ def _openf1_json(
         Additional query parameters.
     cache_name : str or None, optional
         Filename for the on-disk cache.
-    ttl_seconds : int, optional
-        Cache TTL in seconds. Default is 900.
+    ttl_seconds : int or None, optional
+        Cache TTL in seconds. Default is 900. Use ``None`` to reuse the cache
+        whenever the file exists.
+    not_found_as_empty : bool, optional
+        Return an empty list instead of raising on HTTP 404.
 
     Returns
     -------
@@ -267,7 +314,14 @@ def _openf1_json(
     PublicApiError
         If the response is not a list.
     """
-    payload = _request_json(OPENF1_BASE_URL, path, params=params, cache_name=cache_name, ttl_seconds=ttl_seconds)
+    payload = _request_json(
+        OPENF1_BASE_URL,
+        path,
+        params=params,
+        cache_name=cache_name,
+        ttl_seconds=ttl_seconds,
+        not_found_as_empty=not_found_as_empty,
+    )
     if isinstance(payload, list):
         return payload
     raise PublicApiError(f"Respuesta OpenF1 inesperada para {path}")
@@ -328,17 +382,20 @@ def fetch_jolpica_schedule(season: int) -> pd.DataFrame:
     PublicApiError
         If both primary and fallback endpoints fail.
     """
+    ttl_seconds = _jolpica_cache_ttl(season)
     try:
         payload = _jolpica_json(
             f"/ergast/f1/{season}/races.json",
             params={"limit": 100},
             cache_name=f"jolpica_schedule_{season}.json",
+            ttl_seconds=ttl_seconds,
         )
     except PublicApiError:
         payload = _jolpica_json(
             f"/ergast/f1/{season}.json",
             params={"limit": 100},
             cache_name=f"jolpica_schedule_legacy_{season}.json",
+            ttl_seconds=ttl_seconds,
         )
 
     rows: list[dict[str, Any]] = []
@@ -377,6 +434,7 @@ def fetch_jolpica_driver_standings(season: int) -> pd.DataFrame:
         f"/ergast/f1/{season}/driverstandings.json",
         params={"limit": 100},
         cache_name=f"jolpica_driver_standings_{season}.json",
+        ttl_seconds=_jolpica_cache_ttl(season),
     )
     lists = _standings_lists(payload)
     if not lists:
@@ -422,6 +480,7 @@ def fetch_jolpica_constructor_standings(season: int) -> pd.DataFrame:
         f"/ergast/f1/{season}/constructorstandings.json",
         params={"limit": 100},
         cache_name=f"jolpica_constructor_standings_{season}.json",
+        ttl_seconds=_jolpica_cache_ttl(season),
     )
     lists = _standings_lists(payload)
     if not lists:
@@ -462,6 +521,7 @@ def fetch_jolpica_round_results(season: int, round_no: int) -> pd.DataFrame:
         f"/ergast/f1/{season}/{round_no}/results.json",
         params={"limit": 100},
         cache_name=f"jolpica_results_{season}_{round_no}.json",
+        ttl_seconds=_jolpica_cache_ttl(season),
     )
     rows: list[dict[str, Any]] = []
     for race in _race_table(payload):
@@ -507,6 +567,7 @@ def fetch_jolpica_round_qualifying(season: int, round_no: int) -> pd.DataFrame:
         f"/ergast/f1/{season}/{round_no}/qualifying.json",
         params={"limit": 100},
         cache_name=f"jolpica_qualifying_{season}_{round_no}.json",
+        ttl_seconds=_jolpica_cache_ttl(season),
     )
     rows: list[dict[str, Any]] = []
     for race in _race_table(payload):
@@ -547,6 +608,7 @@ def fetch_jolpica_round_sprint_results(season: int, round_no: int) -> pd.DataFra
         f"/ergast/f1/{season}/{round_no}/sprint.json",
         params={"limit": 100},
         cache_name=f"jolpica_sprint_{season}_{round_no}.json",
+        ttl_seconds=_jolpica_cache_ttl(season),
     )
     rows: list[dict[str, Any]] = []
     for race in _race_table(payload):
@@ -738,6 +800,15 @@ def _make_team_lookup(base: pd.DataFrame) -> dict[str, str]:
         lookup[_normalize_text(team)] = str(team)
 
     def add_alias(alias: str, candidates: list[str]) -> None:
+        """Register the first available canonical team candidate for an alias.
+
+        Parameters
+        ----------
+        alias : str
+            Normalised alias key to insert into ``lookup``.
+        candidates : list[str]
+            Candidate canonical team names in preference order.
+        """
         for candidate in candidates:
             if candidate in teams:
                 lookup[alias] = candidate
@@ -1404,6 +1475,18 @@ def fetch_openf1_sessions_for_race(season: int, race: pd.Series) -> pd.DataFrame
     target = _normalize_text(f"{race.get('grand_prix', '')} {race.get('country', '')} {race.get('circuit', '')}")
 
     def score(row: pd.Series) -> int:
+        """Score how closely an OpenF1 session row matches the target race.
+
+        Parameters
+        ----------
+        row : pd.Series
+            OpenF1 session row with country, location and circuit fields.
+
+        Returns
+        -------
+        int
+            Count of target tokens found in the OpenF1 location fields.
+        """
         haystack = _normalize_text(
             f"{row.get('country_name', '')} {row.get('location', '')} {row.get('circuit_short_name', '')}"
         )
@@ -1418,7 +1501,7 @@ def _try_openf1_rows(
     path: str,
     params: dict[str, Any],
     cache_name: str,
-    ttl_seconds: int = 900,
+    ttl_seconds: int | None = 900,
 ) -> tuple[list[dict[str, Any]], str | None]:
     """Call an OpenF1 endpoint and return rows with a silenced 404 error.
 
@@ -1430,7 +1513,7 @@ def _try_openf1_rows(
         Query parameters for the request.
     cache_name : str
         Filename for the on-disk cache.
-    ttl_seconds : int, optional
+    ttl_seconds : int or None, optional
         Cache TTL in seconds. Default is 900.
 
     Returns
@@ -1440,12 +1523,43 @@ def _try_openf1_rows(
         * **error** – Error message string, or ``None`` for 404s and success.
     """
     try:
-        return _openf1_json(path, params=params, cache_name=cache_name, ttl_seconds=ttl_seconds), None
+        return _openf1_json(
+            path,
+            params=params,
+            cache_name=cache_name,
+            ttl_seconds=ttl_seconds,
+            not_found_as_empty=True,
+        ), None
     except PublicApiError as exc:
         message = str(exc)
         if "HTTP 404" in message:
             return [], None
         return [], message
+
+
+def _parse_openf1_datetime(value: Any) -> datetime | None:
+    """Parse an OpenF1 ISO datetime into a timezone-aware UTC datetime.
+
+    Parameters
+    ----------
+    value : Any
+        Raw OpenF1 datetime value, usually an ISO-8601 string.
+
+    Returns
+    -------
+    datetime or None
+        Parsed UTC datetime, or ``None`` when the value is empty or invalid.
+    """
+    if not value:
+        return None
+    try:
+        text = str(value).replace("Z", "+00:00")
+        parsed = datetime.fromisoformat(text)
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        return parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone(timezone.utc)
 
 
 def apply_openf1_weekend_inputs(calendar: pd.DataFrame, season: int, target_rounds: list[int]) -> tuple[pd.DataFrame, list[str], list[str]]:
@@ -1493,6 +1607,10 @@ def apply_openf1_weekend_inputs(calendar: pd.DataFrame, season: int, target_roun
         session = sessions.iloc[0]
         session_key = int(session["session_key"])
         meeting_key = int(session["meeting_key"])
+        session_end = _parse_openf1_datetime(session.get("date_end"))
+        if session_end and session_end > datetime.now(timezone.utc):
+            summary.append(f"OpenF1 round {round_no}: session_key={session_key}, pendiente sin datos en vivo.")
+            continue
         weather, weather_error = _try_openf1_rows(
             "/weather",
             params={"session_key": session_key},
@@ -1676,6 +1794,7 @@ instrument_module_functions(
         "_normalize_text",
         "_bounded",
         "_score_from_position",
+        "_jolpica_cache_ttl",
         "_fallback_code",
         "_is_dnf_status",
         "_sample_confidence",
@@ -1683,5 +1802,6 @@ instrument_module_functions(
         "_constructor_position_score",
         "_blend",
         "_infer_track_features",
+        "_parse_openf1_datetime",
     ),
 )

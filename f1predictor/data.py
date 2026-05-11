@@ -365,7 +365,7 @@ def apply_official_formula1_update(
     calendar: pd.DataFrame,
     payload: dict[str, pd.DataFrame],
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
-    """Apply a Formula1.com LLM web-search payload to driver and calendar seeds.
+    """Apply an LLM web-search payload to driver and calendar seeds.
 
     Parameters
     ----------

@@ -23,7 +23,18 @@ _CONFIGURED = False
 
 
 def configure_logging(log_path: Path = LOG_PATH) -> Path:
-    """Configure Loguru sinks once for the app process."""
+    """Configure Loguru sinks once for the app process.
+
+    Parameters
+    ----------
+    log_path : Path, optional
+        Destination file for persisted application logs.
+
+    Returns
+    -------
+    Path
+        Path to the configured log file.
+    """
     global _CONFIGURED
     if _CONFIGURED:
         return log_path
@@ -60,14 +71,61 @@ def configure_logging(log_path: Path = LOG_PATH) -> Path:
 
 
 def log_call(func: F | None = None, *, level: str = "INFO") -> F | Callable[[F], F]:
-    """Log function entry, exit elapsed time and exceptions."""
+    """Decorate a function to log entry, elapsed time and exceptions.
+
+    Parameters
+    ----------
+    func : F or None, optional
+        Function to wrap. When ``None``, returns a decorator configured
+        with ``level``.
+    level : str, optional
+        Loguru level used for entry and successful-exit messages.
+
+    Returns
+    -------
+    F or Callable[[F], F]
+        Wrapped function when ``func`` is provided, otherwise a decorator.
+    """
 
     def decorate(target: F) -> F:
+        """Wrap one target function with structured Loguru instrumentation.
+
+        Parameters
+        ----------
+        target : F
+            Function to instrument.
+
+        Returns
+        -------
+        F
+            Instrumented function. Existing instrumented functions are
+            returned unchanged.
+        """
         if getattr(target, "_f1predictor_logged", False):
             return target
 
         @functools.wraps(target)
         def wrapper(*args: Any, **kwargs: Any) -> Any:
+            """Execute the wrapped function while logging timing and errors.
+
+            Parameters
+            ----------
+            *args : Any
+                Positional arguments forwarded to the wrapped function.
+            **kwargs : Any
+                Keyword arguments forwarded to the wrapped function.
+
+            Returns
+            -------
+            Any
+                Return value produced by the wrapped function.
+
+            Raises
+            ------
+            Exception
+                Re-raises any exception raised by the wrapped function after
+                logging it.
+            """
             configure_logging()
             call_label = f"{target.__module__}.{target.__qualname__}"
             call_summary = _summarize_call(args, kwargs)
@@ -98,7 +156,19 @@ def instrument_module_functions(
     public_level: str = "INFO",
     private_level: str = "DEBUG",
 ) -> None:
-    """Wrap all top-level functions in a module with ``log_call``."""
+    """Wrap all top-level functions in a module with ``log_call``.
+
+    Parameters
+    ----------
+    module_name : str
+        Fully qualified module name present in ``sys.modules``.
+    skip : Iterable[str], optional
+        Function names that should not be instrumented.
+    public_level : str, optional
+        Log level for public functions.
+    private_level : str, optional
+        Log level for functions whose names start with an underscore.
+    """
     configure_logging()
     module = sys.modules[module_name]
     skipped = set(skip)
@@ -112,6 +182,20 @@ def instrument_module_functions(
 
 
 def _summarize_call(args: tuple[Any, ...], kwargs: dict[str, Any]) -> str:
+    """Build a compact, log-safe summary of call arguments.
+
+    Parameters
+    ----------
+    args : tuple[Any, ...]
+        Positional arguments received by the wrapped function.
+    kwargs : dict[str, Any]
+        Keyword arguments received by the wrapped function.
+
+    Returns
+    -------
+    str
+        Comma-separated summary capped to the first few arguments.
+    """
     parts: list[str] = []
     for value in args[:3]:
         parts.append(_summarize_value(value))
@@ -125,6 +209,18 @@ def _summarize_call(args: tuple[Any, ...], kwargs: dict[str, Any]) -> str:
 
 
 def _summarize_value(value: Any) -> str:
+    """Return a short representation suitable for log messages.
+
+    Parameters
+    ----------
+    value : Any
+        Value to summarise.
+
+    Returns
+    -------
+    str
+        Human-readable summary that avoids dumping large objects.
+    """
     shape = getattr(value, "shape", None)
     if isinstance(shape, tuple):
         return f"{type(value).__name__}(shape={shape})"

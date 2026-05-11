@@ -1,7 +1,7 @@
 """OpenAI integration for official F1 inputs, context and narrative analysis.
 
 Provides helpers that call the OpenAI Responses API with web-search tools
-to fetch official Formula1.com data, search race-weekend context and generate
+to fetch official/trusted F1 data, search race-weekend context and generate
 qualitative championship analyses.  All network calls require the
 ``OPENAI_API_KEY`` environment variable to be set.
 """
@@ -19,6 +19,65 @@ import pandas as pd
 from f1predictor.config import DRIVER_RATING_COLUMNS
 from f1predictor.logging_utils import instrument_module_functions, logger
 
+
+TRUSTED_F1_DEEP_SEARCH_DOMAINS = [
+    "formula1.com",
+    "www.formula1.com",
+    "fia.com",
+    "www.fia.com",
+    "motorsport.com",
+    "www.motorsport.com",
+    "autosport.com",
+    "www.autosport.com",
+    "racefans.net",
+    "www.racefans.net",
+    "the-race.com",
+    "www.the-race.com",
+    "bbc.com",
+    "www.bbc.com",
+    "skysports.com",
+    "www.skysports.com",
+    "espn.com",
+    "www.espn.com",
+]
+
+TRUSTED_F1_CONTEXT_SEARCH_DOMAINS = [
+    *TRUSTED_F1_DEEP_SEARCH_DOMAINS,
+    "weather.com",
+    "www.weather.com",
+    "accuweather.com",
+    "www.accuweather.com",
+    "metoffice.gov.uk",
+    "www.metoffice.gov.uk",
+    "meteoblue.com",
+    "www.meteoblue.com",
+    "pirelli.com",
+    "www.pirelli.com",
+    "ferrari.com",
+    "www.ferrari.com",
+    "mclaren.com",
+    "www.mclaren.com",
+    "mercedesamgf1.com",
+    "www.mercedesamgf1.com",
+    "redbullracing.com",
+    "www.redbullracing.com",
+    "astonmartinf1.com",
+    "www.astonmartinf1.com",
+    "williamsf1.com",
+    "www.williamsf1.com",
+    "alpinecars.com",
+    "www.alpinecars.com",
+    "haasf1team.com",
+    "www.haasf1team.com",
+    "racingbulls.com",
+    "www.racingbulls.com",
+    "sauber-group.com",
+    "www.sauber-group.com",
+    "audi.com",
+    "www.audi.com",
+    "cadillac.com",
+    "www.cadillac.com",
+]
 
 LLM_INSTRUCTIONS = (
     "Eres analista cuantitativo de Formula 1. Usa solo el contexto entregado. "
@@ -151,11 +210,11 @@ def call_llm_formula1_official_update(
     calendar: pd.DataFrame,
     season: int,
 ) -> dict[str, pd.DataFrame]:
-    """Use LLM web search restricted to Formula1.com for official inputs.
+    """Use deep LLM web search across trusted F1 sources for official inputs.
 
     Constructs a structured prompt with the current driver/calendar seeds,
-    calls the OpenAI Responses API with a web-search tool filtered to
-    ``formula1.com``, and returns the parsed JSON as DataFrames.
+    calls the OpenAI Responses API with a high-context web-search tool
+    filtered to trusted F1 domains, and returns the parsed JSON as DataFrames.
 
     Parameters
     ----------
@@ -181,7 +240,7 @@ def call_llm_formula1_official_update(
     """
     from openai import OpenAI
 
-    logger.info("Consultando Formula1.com via LLM: modelo={}, temporada={}", model, season)
+    logger.info("Consultando fuentes F1 confiables via LLM: modelo={}, temporada={}", model, season)
     client = OpenAI()
     driver_seed = drivers[["driver", "code", "team"]].to_dict(orient="records")
     calendar_seed = calendar[["round", "grand_prix", "country", "circuit", "race_date"]].to_dict(orient="records")
@@ -209,6 +268,7 @@ def call_llm_formula1_official_update(
         "sources": [
             f"https://www.formula1.com/en/results/{season}/drivers",
             f"https://www.formula1.com/en/racing/{season}",
+            "https://www.fia.com/",
         ],
     }
     prompt = (
@@ -216,14 +276,19 @@ def call_llm_formula1_official_update(
         f"Temporada objetivo: {season}.\n"
         f"Pilotos esperados del CSV: {json.dumps(driver_seed, ensure_ascii=False)}\n"
         f"Calendario actual del CSV: {json.dumps(calendar_seed, ensure_ascii=False)}\n\n"
-        "Busca solamente en Formula1.com la informacion oficial actual para la temporada: "
-        "line-up de pilotos/equipos, standings de pilotos y calendario. Devuelve SOLO JSON "
+        "Haz una busqueda profunda en fuentes confiables de Formula 1 para la informacion "
+        "actual de la temporada: line-up de pilotos/equipos, standings de pilotos y calendario. "
+        "Prioriza Formula1.com y FIA para datos oficiales; usa medios especializados confiables "
+        "para confirmar o resolver datos faltantes/ambiguos. Devuelve SOLO JSON "
         "valido con este esquema exacto, sin markdown ni texto adicional:\n"
         f"{json.dumps(schema, ensure_ascii=False)}\n\n"
         "Reglas: conserva el code de tres letras del CSV cuando lo puedas mapear; "
         "current_points debe venir del standing oficial; completed debe ser 1 solo si "
-        "Formula1.com muestra resultado para esa ronda; sprint_remaining debe ser 1 si "
-        "el evento tiene sprint y todavia no esta completado. No inventes ratings."
+        "hay resultado publicado para esa ronda; sprint_remaining debe ser 1 si "
+        "el evento tiene sprint y todavia no esta completado. No inventes ratings. "
+        "Incluye en sources las URLs concretas usadas y evita fuentes sin fecha, blogs anonimos, "
+        "foros o redes sociales. Si las fuentes discrepan, usa Formula1.com/FIA y deja la fuente "
+        "principal en sources."
     )
 
     response = client.responses.create(
@@ -233,10 +298,7 @@ def call_llm_formula1_official_update(
                 "type": "web_search",
                 "search_context_size": "high",
                 "filters": {
-                    "allowed_domains": [
-                        "formula1.com",
-                        "www.formula1.com",
-                    ]
+                    "allowed_domains": TRUSTED_F1_DEEP_SEARCH_DOMAINS,
                 },
                 "user_location": {
                     "type": "approximate",
@@ -248,15 +310,16 @@ def call_llm_formula1_official_update(
         tool_choice="required",
         include=["web_search_call.action.sources"],
         instructions=(
-            "Eres un extractor de datos oficiales de Formula 1. Usa web_search restringido "
-            "a Formula1.com. Responde solamente JSON valido con las claves drivers, calendar "
-            "y sources. No agregues explicaciones."
+            "Eres un extractor de datos F1 actualizado. Usa busqueda web profunda en fuentes "
+            "confiables, priorizando Formula1.com y FIA para datos oficiales y usando medios "
+            "especializados solo como verificacion. Responde solamente JSON valido con las "
+            "claves drivers, calendar y sources. No agregues explicaciones."
         ),
         input=prompt,
     )
     data = _extract_json(_extract_response_text(response))
     if not isinstance(data, dict):
-        raise ValueError("La respuesta oficial de Formula1.com no fue un objeto JSON.")
+        raise ValueError("La respuesta de fuentes F1 confiables no fue un objeto JSON.")
 
     sources = list(data.get("sources", [])) if isinstance(data.get("sources", []), list) else []
     for source in _extract_web_search_sources(response):
@@ -271,11 +334,12 @@ def call_llm_formula1_official_update(
 
 
 def call_llm_context_search(model: str, drivers: pd.DataFrame, calendar: pd.DataFrame, round_no: int) -> str:
-    """Search recent context for a selected Grand Prix.
+    """Search broad recent context for a selected Grand Prix.
 
-    Queries the OpenAI Responses API with a web-search tool to find
-    current F1 news relevant to the specified race: weather forecasts,
-    grid penalties, upgrades, tyre performance and safety-car history.
+    Queries the OpenAI Responses API with a high-context web-search tool
+    across trusted F1, team, tyre and weather sources to find current race
+    context: weather forecasts, grid penalties, upgrades, tyre performance
+    and safety-car history.
 
     Parameters
     ----------
@@ -303,18 +367,24 @@ def call_llm_context_search(model: str, drivers: pd.DataFrame, calendar: pd.Data
         f"Fecha de consulta: {date.today().isoformat()}.\n"
         f"Gran Premio seleccionado: {json.dumps(race, ensure_ascii=False)}\n"
         f"Standings/model seed: {json.dumps(standings, ensure_ascii=False)}\n\n"
-        "Busca noticias recientes y verificables que puedan cambiar una prediccion F1: "
-        "clima, parrilla, sanciones, cambios de motor, actualizaciones aerodinamicas, "
-        "ritmo de tanda larga, declaraciones tecnicas, accidentes, safety car esperado "
-        "y rendimiento de neumaticos. Organiza por tema. Cada bullet debe incluir fuente "
-        "o URL visible. Si no hay dato confiable, dilo."
+        "Haz una busqueda amplia y verificable que pueda cambiar una prediccion F1: "
+        "clima local del circuito, probabilidad de lluvia/viento/temperatura, parrilla, "
+        "sanciones, cambios de motor o caja, actualizaciones aerodinamicas, ritmo de tanda "
+        "larga, declaraciones tecnicas, accidentes recientes, safety car esperado, compuestos "
+        "Pirelli y degradacion de neumaticos. Cruza fuentes cuando sea posible: F1/FIA para "
+        "datos oficiales, Pirelli para neumaticos, meteorologia reconocida para clima, equipos "
+        "para upgrades y medios especializados para analisis. Organiza por tema. Cada bullet "
+        "debe incluir fuente o URL visible. Si no hay dato confiable, dilo."
     )
     response = client.responses.create(
         model=model,
         tools=[
             {
                 "type": "web_search",
-                "search_context_size": "medium",
+                "search_context_size": "high",
+                "filters": {
+                    "allowed_domains": TRUSTED_F1_CONTEXT_SEARCH_DOMAINS,
+                },
                 "user_location": {
                     "type": "approximate",
                     "country": "US",
@@ -325,8 +395,10 @@ def call_llm_context_search(model: str, drivers: pd.DataFrame, calendar: pd.Data
         tool_choice="required",
         include=["web_search_call.action.sources"],
         instructions=(
-            "Eres analista F1 actualizado. Usa busqueda web antes de responder. "
-            "No inventes. Responde en espanol con bullets cortos y fuentes visibles."
+            "Eres analista F1 actualizado. Usa busqueda web amplia en fuentes confiables "
+            "antes de responder. Prioriza datos oficiales y fuentes primarias; usa medios "
+            "especializados como verificacion. No inventes. Responde en espanol con bullets "
+            "cortos, accionables y fuentes visibles."
         ),
         input=prompt,
     )

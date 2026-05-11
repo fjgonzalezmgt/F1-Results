@@ -2,7 +2,7 @@
 
 Builds the complete single-page Streamlit application: sidebar controls,
 editable driver and calendar tables, data-update buttons (public APIs and
-Formula1.com via LLM), simulation trigger, result tabs and the LLM
+trusted F1 search via LLM), simulation trigger, result tabs and the LLM
 narrative-analysis panel.
 """
 
@@ -285,7 +285,7 @@ def render_data_editors(
 
     Manages the ``drivers_df`` and ``calendar_df`` keys in
     ``st.session_state``.  Provides buttons to refresh from public APIs
-    and from Formula1.com via LLM web search.
+    and from trusted F1 sources via LLM deep web search.
 
     Parameters
     ----------
@@ -338,9 +338,9 @@ def render_data_editors(
 
     with col2:
         if api_key_available():
-            if st.button("Actualizar F1.com con LLM", help="Usa OpenAI web_search restringido a Formula1.com para standings y calendario oficial; guarda CSV en disco."):
+            if st.button("Busqueda profunda F1 con LLM", help="Usa OpenAI web_search en fuentes confiables de F1 para standings, pilotos y calendario; guarda CSV en disco."):
                 try:
-                    with st.spinner("Buscando informacion oficial en Formula1.com..."):
+                    with st.spinner("Buscando informacion F1 en fuentes confiables..."):
                         payload = call_llm_formula1_official_update(
                             model,
                             st.session_state["drivers_df"],
@@ -361,7 +361,7 @@ def render_data_editors(
                     run_simulation_cached.clear()
                     sources = payload.get("sources", pd.DataFrame())
                     st.session_state["data_update_log"] = {
-                        "title": "Formula1.com via LLM web_search",
+                        "title": "Busqueda profunda F1 via LLM web_search",
                         "summary": [
                             f"{len(payload.get('drivers', pd.DataFrame()))} pilotos oficiales recibidos.",
                             f"{len(payload.get('calendar', pd.DataFrame()))} eventos de calendario recibidos.",
@@ -371,9 +371,9 @@ def render_data_editors(
                     }
                     st.success(f"Datos oficiales guardados en {DRIVERS_PATH.name} y {CALENDAR_PATH.name}.")
                 except Exception as exc:
-                    st.error(f"No se pudo actualizar Formula1.com con LLM: {exc}")
+                    st.error(f"No se pudo actualizar con busqueda profunda F1: {exc}")
         else:
-            st.caption("Agrega OPENAI_API_KEY para Formula1.com via LLM.")
+            st.caption("Agrega OPENAI_API_KEY para busqueda profunda F1 via LLM.")
 
     with col3:
         st.markdown(

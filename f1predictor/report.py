@@ -268,7 +268,7 @@ def save_report_figures(
     race_path = FIGS_DIR / "proximo_gp.png"
 
     _save_bar_chart(
-        driver_results.head(12).sort_values("champion_pct"),
+        _probability_chart_data(driver_results, "champion_pct", limit=12, exclude_zero=True),
         x="champion_pct",
         y="driver",
         color="team",
@@ -277,7 +277,7 @@ def save_report_figures(
         path=driver_path,
     )
     _save_bar_chart(
-        constructor_results.sort_values("champion_pct"),
+        _probability_chart_data(constructor_results, "champion_pct", exclude_zero=True),
         x="champion_pct",
         y="team",
         color="team",
@@ -286,7 +286,7 @@ def save_report_figures(
         path=constructor_path,
     )
     _save_bar_chart(
-        next_race_winners.head(12).sort_values("win_pct"),
+        _probability_chart_data(next_race_winners, "win_pct", limit=12, exclude_zero=True),
         x="win_pct",
         y="driver",
         color="team",
@@ -295,6 +295,42 @@ def save_report_figures(
         path=race_path,
     )
     return {"drivers": driver_path, "constructors": constructor_path, "next_race": race_path}
+
+
+def _probability_chart_data(
+    df: pd.DataFrame,
+    probability_column: str,
+    limit: int | None = None,
+    exclude_zero: bool = False,
+) -> pd.DataFrame:
+    """Prepare probability chart rows in descending probability order.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Source probability table.
+    probability_column : str
+        Numeric column used for sorting and optional zero filtering.
+    limit : int or None, optional
+        Maximum number of rows to keep after sorting.
+    exclude_zero : bool, optional
+        Whether to remove rows whose probability is zero.
+
+    Returns
+    -------
+    pd.DataFrame
+        Filtered and sorted chart table. If the input is empty or the
+        probability column is absent, the original DataFrame is returned.
+    """
+    if df.empty or probability_column not in df.columns:
+        return df
+    chart_df = df.copy()
+    if exclude_zero:
+        chart_df = chart_df.loc[chart_df[probability_column] > 0]
+    chart_df = chart_df.sort_values(probability_column, ascending=False)
+    if limit is not None:
+        chart_df = chart_df.head(limit)
+    return chart_df
 
 
 def markdown_to_latex(markdown: str) -> str:
@@ -320,6 +356,7 @@ def markdown_to_latex(markdown: str) -> str:
     in_items = False
 
     def close_items() -> None:
+        """Close the active LaTeX itemize block when one is open."""
         nonlocal in_items
         if in_items:
             output.append(r"\end{itemize}")
@@ -500,6 +537,7 @@ def _save_bar_chart(
     _configure_kaleido_browser()
     chart_df = df.copy()
     chart_df[y] = chart_df[y].astype(str)
+    y_order = chart_df[y].tolist()
     left_margin = _chart_left_margin(chart_df[y])
     chart_height = max(520, 48 * len(chart_df) + 170)
     fig = px.bar(
@@ -534,6 +572,9 @@ def _save_bar_chart(
     )
     fig.update_yaxes(
         automargin=True,
+        autorange="reversed",
+        categoryorder="array",
+        categoryarray=y_order,
         title_standoff=18,
         title_font=dict(size=20),
         tickfont=dict(size=18),

@@ -525,6 +525,18 @@ def simulate_many(
     sprint_point_values = np.array(SPRINT_POINTS, dtype=float)
 
     def event_fit_vector(race: pd.Series) -> np.ndarray:
+        """Vectorise circuit-fit scores for every driver.
+
+        Parameters
+        ----------
+        race : pd.Series
+            Calendar row containing circuit feature ratings.
+
+        Returns
+        -------
+        np.ndarray
+            Per-driver fit scores aligned to the cleaned driver arrays.
+        """
         downforce_fit = ((chassis - 50.0) / 10.0) * (race["downforce"] - 50.0) / 28.0
         power_fit = ((power_unit - 50.0) / 10.0) * (race["power"] - 50.0) / 28.0
         tyre_fit = ((tyre_management - 50.0) / 10.0) * (race["tyre_stress"] - 50.0) / 30.0
@@ -538,6 +550,25 @@ def simulate_many(
         team_adjustment_by_driver: np.ndarray,
         form_scale: float,
     ) -> tuple[np.ndarray, int]:
+        """Simulate one vectorised sprint or race session.
+
+        Parameters
+        ----------
+        race : pd.Series
+            Calendar row for the event being simulated.
+        sprint : bool
+            Whether to use sprint-specific points and lower noise.
+        team_adjustment_by_driver : np.ndarray
+            Per-driver package adjustment derived from team uncertainty and
+            development drift.
+        form_scale : float
+            Recent-form decay multiplier for this event.
+
+        Returns
+        -------
+        tuple[np.ndarray, int]
+            Session points by driver index and the winning driver index.
+        """
         fit = event_fit_vector(race)
         weather_qualifying = rng.random() < race["weather_risk"] / 100.0 * params.weather_multiplier
         qualifying_score = qualifying_base_no_form + 0.10 * form_scale * recent_form + 1.6 * fit + team_adjustment_by_driver
