@@ -19,6 +19,8 @@ El proyecto también incluye salida persistente a Excel/PDF, bitácora con Logur
 
 > Ver el tablero en línea: https://gamerinsightanalytics.com/f1-cockpit/
 
+> **Disclaimer:** Este proyecto es para análisis de datos y simulaciones informativas. No constituye asesoramiento financiero ni de apuestas y no debe usarse como guía para apuestas.
+
 ---
 
 ## Índice
