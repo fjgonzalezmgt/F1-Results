@@ -17,7 +17,7 @@ Aplicación Streamlit para simular un campeonato de Fórmula 1 desde la temporad
 
 El proyecto también incluye salida persistente a Excel/PDF, bitácora con Loguru y un tablero Power BI (`Tablero/`) para explotar los resultados generados.
 
-> Ver el tablero en línea: https://app.powerbi.com/view?r=eyJrIjoiN2ZlMjE5MmYtNDZjZi00NjdhLWJmMzAtYjNiOGJmN2U1MDM0IiwidCI6IjVkMjFhNmQ1LWIzODMtNGUxMi1hYjFiLTY3YTUxNWZmM2RhOCIsImMiOjR9
+> Ver el tablero en línea: https://gamerinsightanalytics.com/f1-cockpit/
 
 ---
 
