@@ -151,17 +151,17 @@ def api_key_available() -> bool:
 
 
 def default_model() -> str:
-    """Return the configured OpenAI model name.
+    """Return the OpenAI model used by every LLM action.
 
-    Reads the ``OPENAI_MODEL`` environment variable; falls back to
-    ``"gpt-5.5"`` when the variable is unset.
+    The model is intentionally fixed so searches, updates and narrative
+    analyses cannot diverge through environment or UI configuration.
 
     Returns
     -------
     str
         Model identifier string to pass to the OpenAI API.
     """
-    return os.getenv("OPENAI_MODEL", "gpt-5.5")
+    return "gpt-5.6-luna"
 
 
 def _extract_json(text: str) -> Any:
@@ -205,7 +205,6 @@ def _extract_json(text: str) -> Any:
 
 
 def call_llm_formula1_official_update(
-    model: str,
     drivers: pd.DataFrame,
     calendar: pd.DataFrame,
     season: int,
@@ -218,8 +217,6 @@ def call_llm_formula1_official_update(
 
     Parameters
     ----------
-    model : str
-        OpenAI model identifier (e.g. ``"gpt-5.5"``).
     drivers : pd.DataFrame
         Current driver seed table used to guide the LLM.
     calendar : pd.DataFrame
@@ -240,6 +237,7 @@ def call_llm_formula1_official_update(
     """
     from openai import OpenAI
 
+    model = default_model()
     logger.info("Consultando fuentes F1 confiables via LLM: modelo={}, temporada={}", model, season)
     client = OpenAI()
     driver_seed = drivers[["driver", "code", "team"]].to_dict(orient="records")
@@ -333,7 +331,7 @@ def call_llm_formula1_official_update(
     }
 
 
-def call_llm_context_search(model: str, drivers: pd.DataFrame, calendar: pd.DataFrame, round_no: int) -> str:
+def call_llm_context_search(drivers: pd.DataFrame, calendar: pd.DataFrame, round_no: int) -> str:
     """Search broad recent context for a selected Grand Prix.
 
     Queries the OpenAI Responses API with a high-context web-search tool
@@ -343,8 +341,6 @@ def call_llm_context_search(model: str, drivers: pd.DataFrame, calendar: pd.Data
 
     Parameters
     ----------
-    model : str
-        OpenAI model identifier.
     drivers : pd.DataFrame
         Current driver standings used to contextualise the prompt.
     calendar : pd.DataFrame
@@ -359,6 +355,7 @@ def call_llm_context_search(model: str, drivers: pd.DataFrame, calendar: pd.Data
     """
     from openai import OpenAI
 
+    model = default_model()
     logger.info("Buscando contexto LLM: modelo={}, ronda={}", model, round_no)
     client = OpenAI()
     race = calendar.loc[calendar["round"] == round_no].iloc[0].to_dict()
@@ -465,13 +462,11 @@ def build_analysis_payload(
     return payload
 
 
-def call_llm_analysis(model: str, payload: dict[str, Any]) -> str:
+def call_llm_analysis(payload: dict[str, Any]) -> str:
     """Call OpenAI to generate a narrative championship analysis.
 
     Parameters
     ----------
-    model : str
-        OpenAI model identifier.
     payload : dict[str, Any]
         Serialisable analysis payload, typically built with
         ``build_analysis_payload``.
@@ -484,6 +479,7 @@ def call_llm_analysis(model: str, payload: dict[str, Any]) -> str:
     """
     from openai import OpenAI
 
+    model = default_model()
     logger.info("Generando analisis LLM: modelo={}, payload_keys={}", model, list(payload))
     client = OpenAI()
     response = client.responses.create(

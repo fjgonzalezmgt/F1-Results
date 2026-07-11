@@ -553,7 +553,7 @@ def run_simulation_cached(
 
 
 
-def render_sidebar(calendar: pd.DataFrame) -> tuple[SimParams, str, int, int]:
+def render_sidebar(calendar: pd.DataFrame) -> tuple[SimParams, int, int]:
     """Render the sidebar with model controls and return user selections.
 
     Parameters
@@ -563,9 +563,8 @@ def render_sidebar(calendar: pd.DataFrame) -> tuple[SimParams, str, int, int]:
 
     Returns
     -------
-    tuple[SimParams, str, int, int]
+    tuple[SimParams, int, int]
         * **params** – ``SimParams`` built from the sidebar widgets.
-        * **model** – OpenAI model name entered by the user.
         * **api_season** – Season year selected for API data fetching.
         * **history_seasons** – Number of historical seasons used as priors.
     """
@@ -602,7 +601,7 @@ def render_sidebar(calendar: pd.DataFrame) -> tuple[SimParams, str, int, int]:
     history_seasons = st.sidebar.number_input("Temporadas historicas", min_value=0, max_value=5, value=3, step=1, help="Numero de temporadas previas usadas para construir priors.")
 
     st.sidebar.header("LLM")
-    model = st.sidebar.text_input("Modelo OpenAI", value=default_model(), help="Modelo que se usara para busqueda contextual y analisis narrativo.")
+    st.sidebar.caption(f"Modelo OpenAI: {default_model()}")
     st.sidebar.caption(f"OPENAI_API_KEY: {'detectada' if api_key_available() else 'no detectada'}")
 
     params = SimParams(
@@ -622,13 +621,12 @@ def render_sidebar(calendar: pd.DataFrame) -> tuple[SimParams, str, int, int]:
         development_drift=float(development_drift),
         team_uncertainty=float(team_uncertainty),
     )
-    return params, model, int(api_season), int(history_seasons)
+    return params, int(api_season), int(history_seasons)
 
 
 def render_data_editors(
     default_drivers: pd.DataFrame,
     default_calendar: pd.DataFrame,
-    model: str,
     api_season: int,
     history_seasons: int,
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
@@ -644,8 +642,6 @@ def render_data_editors(
         Fallback driver table used when session state is empty.
     default_calendar : pd.DataFrame
         Fallback calendar table used when session state is empty.
-    model : str
-        OpenAI model identifier for the LLM update button.
     api_season : int
         Season year passed to the API refresh functions.
 
@@ -693,7 +689,6 @@ def render_data_editors(
                 try:
                     with st.spinner("Buscando informacion F1 en fuentes confiables..."):
                         payload = call_llm_formula1_official_update(
-                            model,
                             st.session_state["drivers_df"],
                             st.session_state["calendar_df"],
                             season=api_season,
@@ -1116,7 +1111,6 @@ def render_llm_view(
     race_winners: pd.DataFrame | None,
     drivers: pd.DataFrame,
     calendar: pd.DataFrame,
-    model: str,
     params: SimParams,
 ) -> None:
     """Render the LLM context-search and narrative-analysis panel.
@@ -1137,8 +1131,6 @@ def render_llm_view(
         Cleaned driver seed table for context.
     calendar : pd.DataFrame
         Cleaned calendar table for context.
-    model : str
-        OpenAI model identifier to use for the API calls.
     """
     st.subheader("LLM en la ecuacion")
     if not api_key_available():
@@ -1150,7 +1142,7 @@ def render_llm_view(
     if st.button("Buscar contexto del proximo GP", help="Consulta fuentes web para clima, sanciones, upgrades y contexto competitivo del siguiente GP."):
         try:
             with st.spinner("Buscando clima, parrilla, upgrades y sanciones..."):
-                st.session_state["llm_notes"] = call_llm_context_search(model, drivers, calendar, selected_round)
+                st.session_state["llm_notes"] = call_llm_context_search(drivers, calendar, selected_round)
         except Exception as exc:
             st.error(f"No se pudo buscar contexto: {exc}")
 
@@ -1179,7 +1171,7 @@ def render_llm_view(
             )
             try:
                 with st.spinner("Consultando al LLM..."):
-                    answer = call_llm_analysis(model, payload).strip()
+                    answer = call_llm_analysis(payload).strip()
                     persist_llm_analysis(answer)
                     st.session_state["llm_answer"] = answer
                     st.session_state["llm_analysis_path"] = str(LLM_ANALYSIS_PATH)
@@ -1299,12 +1291,12 @@ def render_app() -> None:
         if analysis:
             st.session_state["llm_answer"] = analysis
 
-    params, llm_model, api_season, history_seasons = render_sidebar(default_calendar)
+    params, api_season, history_seasons = render_sidebar(default_calendar)
 
     st.title(APP_TITLE)
     st.markdown(f'<div class="app-kicker">{html.escape(APP_CAPTION)}</div>', unsafe_allow_html=True)
 
-    drivers, calendar = render_data_editors(default_drivers, default_calendar, llm_model, api_season, history_seasons)
+    drivers, calendar = render_data_editors(default_drivers, default_calendar, api_season, history_seasons)
     render_status_strip(drivers, calendar, params)
 
     if st.button("Simular campeonato", type="primary", width="stretch", help="Ejecuta Monte Carlo con los parametros actuales y actualiza todas las probabilidades."):
@@ -1362,7 +1354,7 @@ def render_app() -> None:
     with tab_model:
         render_model_view()
     with tab_llm:
-        render_llm_view(driver_results, constructor_results, race_winners, sim_drivers, sim_calendar, llm_model, sim_params)
+        render_llm_view(driver_results, constructor_results, race_winners, sim_drivers, sim_calendar, sim_params)
 
 
 def main() -> None:

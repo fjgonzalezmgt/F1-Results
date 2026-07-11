@@ -216,8 +216,9 @@ Crea un archivo `.env` en la raíz del proyecto para habilitar funciones LLM:
 
 ```dotenv
 OPENAI_API_KEY=tu_clave_aqui
-OPENAI_MODEL=gpt-4o
 ```
+
+Todas las acciones LLM usan de forma fija `gpt-5.6-luna`.
 
 Variables opcionales de logging:
 
