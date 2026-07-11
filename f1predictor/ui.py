@@ -267,6 +267,19 @@ def inject_style() -> None:
         @media (max-width: 900px) {
             .status-strip {grid-template-columns: repeat(2, minmax(0, 1fr));}
         }
+        @media (max-width: 560px) {
+            .block-container {padding-top: 0.65rem; padding-left: 1rem; padding-right: 1rem;}
+            .status-strip {grid-template-columns: 1fr; gap: 0.5rem;}
+            h1 {font-size: 1.85rem;}
+        }
+        .workflow-note {
+            border-left: 4px solid #dc0000;
+            padding: 0.65rem 0.85rem;
+            margin: 0.8rem 0 1rem 0;
+            color: var(--muted-text);
+            background: var(--card-bg);
+            border-radius: 0 8px 8px 0;
+        }
         </style>
         """,
         unsafe_allow_html=True,
@@ -492,7 +505,6 @@ def render_copy_button(text: str, key: str) -> None:
     st.iframe(
         iframe_src,
         height=42,
-        scrolling=False,
     )
 
 
@@ -570,9 +582,9 @@ def render_sidebar(calendar: pd.DataFrame) -> tuple[SimParams, int, int]:
         * **api_season** – Season year selected for API data fetching.
         * **history_seasons** – Number of historical seasons used as priors.
     """
-    st.sidebar.header("Motor")
+    st.sidebar.header("Configuracion")
+    st.sidebar.caption("Los valores predeterminados ofrecen un escenario equilibrado. Ajusta solo lo que necesites.")
     simulations = st.sidebar.slider("Simulaciones", 500, 50000, 4000, step=500, help="Numero de iteraciones Monte Carlo. Mas iteraciones mejoran estabilidad pero tardan mas.")
-    seed = st.sidebar.number_input("Semilla", min_value=1, value=DEFAULT_SEASON, step=1, help="Valor para reproducir exactamente los mismos resultados aleatorios.")
     open_rounds = calendar.loc[calendar["completed"] == 0, "round"].tolist()
     default_round = int(open_rounds[0]) if open_rounds else int(calendar["round"].max())
     start_round = st.sidebar.selectbox(
@@ -583,28 +595,26 @@ def render_sidebar(calendar: pd.DataFrame) -> tuple[SimParams, int, int]:
     )
     include_sprints = st.sidebar.toggle("Incluir sprints pendientes", value=True, help="Si esta activo, suma puntos esperados de sprint en las rondas restantes.")
 
-    st.sidebar.header("Pesos")
-    driver_weight = st.sidebar.slider("Piloto", 0.10, 0.80, 0.42, step=0.02, help="Peso del talento y ejecucion del piloto en el ritmo base.")
-    constructor_weight = st.sidebar.slider("Constructor", 0.10, 0.80, 0.48, step=0.02, help="Peso del rendimiento del auto/equipo en el ritmo base.")
-    form_weight = st.sidebar.slider("Forma reciente", 0.00, 0.30, 0.06, step=0.02, help="Impacto de resultados recientes sobre el rendimiento esperado.")
-    form_decay_races = st.sidebar.slider("Duracion forma (carreras)", 0.5, 8.0, 2.5, step=0.5, help="Cantidad de carreras en las que se diluye el efecto de forma reciente.")
-    qualifying_weight = st.sidebar.slider("Peso de clasificacion", 0.20, 1.20, 0.72, step=0.02, help="Importancia de la clasificacion en el resultado final de carrera.")
+    with st.sidebar.expander("Ajustes avanzados del modelo", expanded=False):
+        seed = st.number_input("Semilla", min_value=1, value=DEFAULT_SEASON, step=1, help="Valor para reproducir exactamente los mismos resultados aleatorios.")
+        st.markdown("**Pesos**")
+        driver_weight = st.slider("Piloto", 0.10, 0.80, 0.42, step=0.02, help="Peso del talento y ejecucion del piloto en el ritmo base.")
+        constructor_weight = st.slider("Constructor", 0.10, 0.80, 0.48, step=0.02, help="Peso del rendimiento del auto/equipo en el ritmo base.")
+        form_weight = st.slider("Forma reciente", 0.00, 0.30, 0.06, step=0.02, help="Impacto de resultados recientes sobre el rendimiento esperado.")
+        form_decay_races = st.slider("Duracion forma (carreras)", 0.5, 8.0, 2.5, step=0.5, help="Cantidad de carreras en las que se diluye el efecto de forma reciente.")
+        qualifying_weight = st.slider("Peso de clasificacion", 0.20, 1.20, 0.72, step=0.02, help="Importancia de la clasificacion en el resultado final de carrera.")
+        st.markdown("**Incertidumbre**")
+        chaos = st.slider("Caos carrera", 1.0, 14.0, 5.5, step=0.5, help="Ruido global de carrera: incidentes, estrategia, variabilidad y azar.")
+        reliability_multiplier = st.slider("Riesgo fiabilidad", 0.4, 2.4, 1.0, step=0.1, help="Escala de abandonos y problemas mecanicos.")
+        weather_multiplier = st.slider("Clima", 0.3, 2.5, 1.0, step=0.1, help="Escala del impacto de clima sobre el orden esperado.")
+        safety_car_multiplier = st.slider("Safety car", 0.3, 2.5, 1.0, step=0.1, help="Escala del impacto de neutralizaciones y reinicios.")
+        development_drift = st.slider("Desarrollo por equipo", 0.0, 8.0, 2.4, step=0.2, help="Magnitud de mejoras/regresiones de rendimiento entre equipos.")
+        team_uncertainty = st.slider("Incertidumbre auto", 0.0, 10.0, 6.0, step=0.5, help="Varianza persistente del paquete tecnico por equipo.")
 
-    st.sidebar.header("Incertidumbre")
-    chaos = st.sidebar.slider("Caos carrera", 1.0, 14.0, 5.5, step=0.5, help="Ruido global de carrera: incidentes, estrategia, variabilidad y azar.")
-    reliability_multiplier = st.sidebar.slider("Riesgo fiabilidad", 0.4, 2.4, 1.0, step=0.1, help="Escala de abandonos y problemas mecanicos.")
-    weather_multiplier = st.sidebar.slider("Clima", 0.3, 2.5, 1.0, step=0.1, help="Escala del impacto de clima sobre el orden esperado.")
-    safety_car_multiplier = st.sidebar.slider("Safety car", 0.3, 2.5, 1.0, step=0.1, help="Escala del impacto de neutralizaciones y reinicios.")
-    development_drift = st.sidebar.slider("Desarrollo por equipo", 0.0, 8.0, 2.4, step=0.2, help="Magnitud de mejoras/regresiones de rendimiento entre equipos.")
-    team_uncertainty = st.sidebar.slider("Incertidumbre auto", 0.0, 10.0, 6.0, step=0.5, help="Varianza persistente del paquete tecnico por equipo.")
-
-    st.sidebar.header("Datos")
-    api_season = st.sidebar.number_input("Temporada inputs", min_value=2023, max_value=2100, value=DEFAULT_SEASON, step=1, help="Temporada para consultar standings y resultados externos.")
-    history_seasons = st.sidebar.number_input("Temporadas historicas", min_value=0, max_value=5, value=3, step=1, help="Numero de temporadas previas usadas para construir priors.")
-
-    st.sidebar.header("LLM")
-    st.sidebar.caption(f"Modelo OpenAI: {default_model()}")
-    st.sidebar.caption(f"OPENAI_API_KEY: {'detectada' if api_key_available() else 'no detectada'}")
+    with st.sidebar.expander("Fuentes de datos", expanded=False):
+        api_season = st.number_input("Temporada", min_value=2023, max_value=2100, value=DEFAULT_SEASON, step=1, help="Temporada para consultar standings y resultados externos.")
+        history_seasons = st.number_input("Temporadas historicas", min_value=0, max_value=5, value=3, step=1, help="Numero de temporadas previas usadas para construir priors.")
+        st.caption(f"LLM: {default_model()} · API key {'disponible' if api_key_available() else 'no configurada'}")
 
     params = SimParams(
         simulations=int(simulations),
@@ -626,7 +636,7 @@ def render_sidebar(calendar: pd.DataFrame) -> tuple[SimParams, int, int]:
     return params, int(api_season), int(history_seasons)
 
 
-def render_data_editors(
+def _render_data_editors_content(
     default_drivers: pd.DataFrame,
     default_calendar: pd.DataFrame,
     api_season: int,
@@ -775,6 +785,18 @@ def render_data_editors(
             },
         )
     return clean_drivers(edited_drivers), clean_calendar(edited_calendar)
+
+
+def render_data_editors(
+    default_drivers: pd.DataFrame,
+    default_calendar: pd.DataFrame,
+    api_season: int,
+    history_seasons: int,
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Keep detailed data preparation available without dominating the main flow."""
+    with st.expander("1 · Revisar o actualizar datos (opcional)", expanded=False):
+        st.caption("Actualiza fuentes o edita ratings y calendario. Si no haces cambios, se usan los datos guardados.")
+        return _render_data_editors_content(default_drivers, default_calendar, api_season, history_seasons)
 
 
 def render_driver_view(driver_results: pd.DataFrame) -> None:
@@ -1185,33 +1207,7 @@ def render_llm_view(
         render_copy_button(answer, "analysis")
         st.markdown(answer)
 
-    report_ready = (
-        driver_results is not None
-        and constructor_results is not None
-        and race_winners is not None
-        and bool(st.session_state.get("llm_answer"))
-    )
-    st.divider()
-    if st.button("Guardar reporte", disabled=not report_ready, help="Compila un reporte final en Markdown, TeX y PDF con tablas, graficas y analisis."):
-        try:
-            with st.spinner("Generando graficos, renderizando LaTeX y compilando PDF..."):
-                pdf_path = render_report(
-                    driver_results,
-                    constructor_results,
-                    race_winners,
-                    drivers,
-                    calendar,
-                    params,
-                    st.session_state.get("llm_answer", ""),
-                )
-            st.success(f"Reporte guardado: {pdf_path.name}")
-            st.caption(f"Markdown: {LLM_ANALYSIS_PATH} | TeX: {REPORT_TEX_PATH} | PDF: {REPORT_PDF_PATH}")
-        except Exception as exc:
-            st.error(f"No se pudo guardar el reporte: {exc}")
-    elif not report_ready:
-        st.caption("El reporte se habilita despues de correr la simulacion y generar el analisis LLM.")
-
-    render_report_download(key="download_report_pdf_latest")
+    st.caption("El analisis generado se incluye automaticamente al guardar el reporte desde la barra superior.")
 
 
 def render_report_actions_bar(
@@ -1227,7 +1223,6 @@ def render_report_actions_bar(
         driver_results is not None
         and constructor_results is not None
         and race_winners is not None
-        and bool(st.session_state.get("llm_answer"))
     )
 
     st.markdown('<div class="report-actions"><div class="report-actions-title">Reporte</div>', unsafe_allow_html=True)
@@ -1263,7 +1258,7 @@ def render_report_actions_bar(
         if report_ready:
             st.caption("Listo para generar reporte. Puedes guardarlo o descargar el ultimo PDF disponible.")
         else:
-            st.caption("Para habilitar Guardar reporte: ejecuta simulacion y genera analisis LLM.")
+            st.caption("Ejecuta la simulacion para habilitar el reporte. El analisis LLM es opcional.")
         if REPORT_PDF_PATH.exists():
             st.caption(f"Ultimo PDF: {REPORT_PDF_PATH.name}")
 
@@ -1297,10 +1292,15 @@ def render_app() -> None:
 
     st.title(APP_TITLE)
     st.markdown(f'<div class="app-kicker">{html.escape(APP_CAPTION)}</div>', unsafe_allow_html=True)
+    st.markdown(
+        '<div class="workflow-note"><strong>Flujo recomendado:</strong> revisa los datos solo si hace falta, ejecuta la simulacion y explora los resultados. Los ajustes avanzados estan en la barra lateral.</div>',
+        unsafe_allow_html=True,
+    )
 
     drivers, calendar = render_data_editors(default_drivers, default_calendar, api_season, history_seasons)
     render_status_strip(drivers, calendar, params)
 
+    st.markdown("### 2 · Ejecutar escenario")
     if st.button("Simular campeonato", type="primary", width="stretch", help="Ejecuta Monte Carlo con los parametros actuales y actualiza todas las probabilidades."):
         try:
             simulation_results = run_simulation_cached(
@@ -1331,8 +1331,9 @@ def render_app() -> None:
 
     render_report_actions_bar(driver_results, constructor_results, race_winners, sim_drivers, sim_calendar, sim_params)
 
+    st.markdown("### 3 · Explorar resultados")
     tab_drivers, tab_teams, tab_races, tab_diagnostics, tab_model, tab_llm = st.tabs(
-        ["Pilotos", "Constructores", "GP", "Diagnostico", "Modelo", "LLM"]
+        ["Campeonato · Pilotos", "Campeonato · Equipos", "Proximos GP", "Por que da este resultado", "Metodologia", "Analisis con IA"]
     )
     if results is None:
         with tab_drivers:
