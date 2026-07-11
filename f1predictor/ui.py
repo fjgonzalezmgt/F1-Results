@@ -10,12 +10,12 @@ from __future__ import annotations
 
 import html
 import json
+import urllib.parse
 
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
-import streamlit.components.v1 as components
 from dotenv import load_dotenv
 
 from f1predictor.config import (
@@ -488,9 +488,11 @@ def render_copy_button(text: str, key: str) -> None:
         }});
         </script>
         """
-    components.html(
-        iframe_html,
+    iframe_src = "data:text/html;charset=utf-8," + urllib.parse.quote(iframe_html)
+    st.iframe(
+        iframe_src,
         height=42,
+        scrolling=False,
     )
 
 
