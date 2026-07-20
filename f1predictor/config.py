@@ -26,13 +26,13 @@ REPORT_TEMPLATE_PATH = REPORT_DIR / "reporte_f1_template.tex"
 REPORT_TEX_PATH = REPORT_DIR / "reporte_f1.tex"
 REPORT_PDF_PATH = REPORT_DIR / "reporte_f1.pdf"
 
-APP_TITLE = "F1 Championship Lab"
+APP_TITLE = "F1 Predict Decision Lab"
 
 DEFAULT_SEASON: int = date.today().year
 
 APP_CAPTION = (
-    f"Monte Carlo para simular el campeonato F1 {DEFAULT_SEASON} con pilotos, constructores, "
-    "clima, fiabilidad, safety car y contexto LLM."
+    f"Responde las 10 preguntas de F1 Predict para cada GP de {DEFAULT_SEASON} con Monte Carlo, "
+    "puntos esperados, contexto LLM y una proyeccion secundaria del campeonato."
 )
 
 F1_DRIVERS_URL = "https://www.formula1.com/en/drivers"

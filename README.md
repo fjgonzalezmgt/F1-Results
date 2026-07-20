@@ -1,4 +1,4 @@
-# F1 Championship Lab
+# F1 Predict Decision Lab
 
 > **Autor:** Francisco Gonzalez - Quality Analytics
 
@@ -13,7 +13,7 @@
 ![Conda](https://img.shields.io/badge/Conda-environment-44A833?logo=anaconda&logoColor=white)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
-Aplicación Streamlit para simular un campeonato de Fórmula 1 desde la temporada actual. Combina un motor Monte Carlo vectorizado, ratings editables de pilotos y constructores, características de circuito, actualización con APIs públicas y una capa LLM para búsqueda contextual, análisis narrativo y consulta de fuentes oficiales.
+Aplicación Streamlit para responder las 10 preguntas por ronda del juego oficial F1 Predict y, como análisis secundario, simular el campeonato de Fórmula 1. Combina un motor Monte Carlo, puntuación por valor esperado, ratings editables, características de circuito, APIs públicas y una capa LLM para descubrir las preguntas vigentes, buscar contexto y generar la hoja final de respuestas.
 
 El proyecto también incluye salida persistente a Excel/PDF, bitácora con Loguru y un tablero Power BI (`Tablero/`) para explotar los resultados generados.
 
@@ -43,6 +43,9 @@ El proyecto también incluye salida persistente a Excel/PDF, bitácora con Logur
 
 | Componente | Descripción |
 |---|---|
+| **Hoja F1 Predict** | Contesta una fila por pregunta; muestra respuesta recomendada, probabilidad, puntos publicados y valor esperado. |
+| **Preguntas oficiales** | La búsqueda LLM intenta extraer de F1 Predict las 10 preguntas, opciones y puntos de la ronda. Si no están disponibles, usa un catálogo fallback claramente identificado y editable. |
+| **Métricas de evento** | Estima P1-P22, pole, podio, top 5/10, puntos, abandono, vuelta rápida, posiciones ganadas, safety car, bandera roja, clasificados, parada rápida y cara a cara. |
 | **Monte Carlo de temporada** | Corre `N` simulaciones completas desde la ronda elegida; estima probabilidad de título, top 3, top 6 y puntos esperados para pilotos y constructores. |
 | **Modelo piloto/constructor** | Combina 13 ratings por piloto con atributos de equipo: ritmo, chasis, unidad de potencia, estrategia, fiabilidad y forma reciente. |
 | **Circuitos** | Cada GP ajusta el rendimiento según carga aerodinámica, potencia, estrés de neumáticos, dificultad de adelantamiento, riesgo climático, safety car e importancia de clasificación. |
@@ -51,9 +54,9 @@ El proyecto también incluye salida persistente a Excel/PDF, bitácora con Logur
 | **Diagnóstico** | Descompone probabilidades en fuerza del piloto, fuerza del auto, clasificación, forma regresada, ajuste de pista, ruido de carrera e incertidumbre. |
 | **Datos editables** | Pilotos y calendario viven en CSV y pueden editarse desde la app con `st.data_editor`. |
 | **Actualización por APIs** | Consulta Jolpica-F1/Ergast y OpenF1, cachea JSON en `data/cache/`, recalibra inputs y guarda los CSV actualizados. |
-| **Búsqueda F1 con LLM** | Usa OpenAI Responses API con `web_search` para consultar fuentes confiables de F1 y actualizar standings, line-up o calendario. |
-| **Análisis narrativo** | Genera contexto del próximo GP y un veredicto LLM sobre pilotos, constructores, riesgos y escenarios. |
-| **Reporte** | Exporta resultados Monte Carlo a Excel y genera un informe LaTeX/PDF con gráficos Plotly y el análisis LLM persistido. |
+| **Búsqueda F1 con LLM** | Usa OpenAI Responses API con `web_search` para extraer preguntas de F1 Predict y consultar clima, sanciones, upgrades, neumáticos y parrilla. |
+| **Análisis narrativo** | Genera primero la hoja de respuestas del juego, con confianza y riesgos; deja el campeonato como lectura secundaria. |
+| **Reporte** | Exporta catálogo, respuestas y resultados Monte Carlo a Excel y genera un informe LaTeX/PDF centrado en el próximo GP. |
 | **Logging** | Registra ejecución, tiempos y excepciones con Loguru en `resultados/app.log`. |
 | **Power BI** | Incluye un proyecto `.pbip` en `Tablero/` para visualizar los resultados producidos por la simulación. |
 
@@ -81,6 +84,7 @@ graph TD
         PARAMS["parameters.py<br/>SimParams"]
         PUBAPI["public_apis.py<br/>Ingesta, cache y calibración"]
         SIM["simulator.py<br/>Monte Carlo vectorizado"]
+        GAME["game.py<br/>Preguntas y valor esperado"]
         LLM["llm.py<br/>Responses API y web_search"]
         REPORT["report.py<br/>Excel, LaTeX, PDF y figuras"]
         LOGS["logging_utils.py<br/>Loguru e instrumentación"]
@@ -101,8 +105,9 @@ graph TD
     LLM --> UI
     PARAMS --> SIM
     DATA --> SIM
-    SIM --> UI
-    SIM & LLM --> REPORT
+    SIM --> GAME
+    GAME --> UI
+    SIM & GAME & LLM --> REPORT
     CONFIG --> DATA
     CONFIG --> PUBAPI
     CONFIG --> SIM
@@ -153,6 +158,7 @@ sequenceDiagram
     participant PUB as public_apis.py
     participant LLM as llm.py
     participant SIM as simulator.py
+    participant GAME as game.py
     participant REP as report.py
 
     Usuario->>UI: Edita pilotos/calendario
@@ -165,7 +171,10 @@ sequenceDiagram
 
     Usuario->>UI: Pulsa Simular campeonato
     UI->>SIM: simulate_many(drivers, calendar, params)
-    SIM-->>UI: driver_df, constructor_df, race_df
+    SIM-->>UI: campeonato + distribuciones y métricas por GP
+    UI->>LLM: Busca 10 preguntas, opciones y puntos de F1 Predict
+    UI->>GAME: answer_f1_predict_questions()
+    GAME-->>UI: hoja de respuestas por probabilidad/valor esperado
     UI->>REP: persist_montecarlo_results()
     REP-->>UI: resultados/resultados_montecarlo.xlsx
 
@@ -234,12 +243,12 @@ Sin `OPENAI_API_KEY`, la simulación, edición de datos, APIs públicas y export
 ## Flujo recomendado
 
 1. Abrir la app con `streamlit run app.py`.
-2. Revisar o editar `Pilotos` y `Calendario`.
-3. Actualizar inputs con `Actualizar info (APIs públicas)` o `Búsqueda profunda F1 con LLM`.
-4. Ajustar pesos e incertidumbre en la barra lateral.
-5. Pulsar `Simular campeonato`.
-6. Revisar pestañas de pilotos, constructores, carreras, diagnóstico y modelo.
-7. Buscar contexto del próximo GP y generar análisis LLM si hay API key.
+2. Revisar o actualizar `Pilotos` y `Calendario` si hace falta.
+3. Ajustar pesos e incertidumbre y pulsar `Simular campeonato`.
+4. En `F1 Predict · 10 respuestas`, seleccionar la ronda y pulsar `Buscar las 10 preguntas oficiales`.
+5. Verificar preguntas, opciones y puntos en el editor; el fallback nunca se presenta como oficial.
+6. Revisar la respuesta de mayor probabilidad o de mayor valor esperado para cada pregunta.
+7. Buscar contexto para las preguntas y generar el análisis LLM.
 8. Guardar el reporte para producir PDF, Excel, figuras y Markdown.
 
 ---
@@ -286,7 +295,7 @@ Sin `OPENAI_API_KEY`, la simulación, edición de datos, APIs públicas y export
 
 | Archivo / carpeta | Descripción |
 |---|---|
-| `resultados/resultados_montecarlo.xlsx` | Resultados de pilotos, constructores y probabilidades por GP. |
+| `resultados/resultados_montecarlo.xlsx` | Resultados, métricas por GP, catálogo `f1_predict_preguntas` y hoja `f1_predict_respuestas`. |
 | `resultados/analisis_llm.md` | Último análisis narrativo generado por LLM. |
 | `resultados/app.log` | Bitácora de ejecución con Loguru. |
 | `reporte/reporte_f1.pdf` | Reporte final compilado con LaTeX. |
@@ -339,7 +348,8 @@ F1 Results/
     ├── logging_utils.py           # Configuración Loguru e instrumentación
     ├── parameters.py              # SimParams
     ├── public_apis.py             # Jolpica/OpenF1, cache y calibración
-    ├── simulator.py               # Motor Monte Carlo
+    ├── simulator.py               # Motor Monte Carlo y métricas del próximo GP
+    ├── game.py                    # Preguntas, opciones y respuestas F1 Predict
     ├── llm.py                     # OpenAI Responses API
     ├── report.py                  # Excel, figuras, LaTeX y PDF
     └── ui.py                      # Interfaz Streamlit
@@ -351,6 +361,8 @@ F1 Results/
 
 | Fuente | URL |
 |---|---|
+| F1 Predict game rules | https://f1predict.formula1.com/en/game-rules |
+| F1 Predict FAQ | https://f1predict.formula1.com/faqs |
 | Formula 1 drivers | https://www.formula1.com/en/drivers |
 | Formula 1 results | https://www.formula1.com/en/results |
 | Formula 1 calendar | https://www.formula1.com/en/racing |
@@ -359,4 +371,4 @@ F1 Results/
 | FastF1 | https://docs.fastf1.dev/ |
 | OpenAI web search | https://platform.openai.com/docs/guides/tools-web-search?api-mode=responses |
 
-La justificación metodológica del enfoque está documentada en [`docs/research_f1_models.md`](docs/research_f1_models.md).
+La justificación metodológica está en [`docs/research_f1_models.md`](docs/research_f1_models.md) y el contrato específico del juego en [`docs/f1_predict_rules.md`](docs/f1_predict_rules.md).

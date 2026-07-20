@@ -51,13 +51,21 @@ from f1predictor.llm import (
     build_analysis_payload,
     call_llm_analysis,
     call_llm_context_search,
+    call_llm_f1_predict_questions,
     call_llm_formula1_official_update,
     default_model,
+)
+from f1predictor.game import (
+    QUESTION_COLUMNS,
+    answer_f1_predict_questions,
+    default_question_catalog,
+    normalize_question_catalog,
+    score_question_options,
 )
 from f1predictor.logging_utils import configure_logging, instrument_module_functions, logger
 from f1predictor.parameters import SimParams
 from f1predictor.public_apis import refresh_model_inputs_from_public_apis
-from f1predictor.report import latest_llm_analysis, latest_montecarlo_results, persist_llm_analysis, persist_montecarlo_results, render_report
+from f1predictor.report import latest_f1_predict_data, latest_llm_analysis, latest_montecarlo_results, persist_llm_analysis, persist_montecarlo_results, render_report
 from f1predictor.simulator import build_driver_diagnostics, describe_driver, simulate_many
 
 
@@ -985,7 +993,11 @@ def render_race_view(race_winners: pd.DataFrame, calendar: pd.DataFrame, drivers
             axis_label="Probabilidad de victoria (%)",
             filename="gp_probabilidad_victoria",
         )
-        st.dataframe(race_probs.round(2), width="stretch", hide_index=True)
+        visible_columns = [
+            "driver", "team", "win_pct", "pole_pct", "podium_pct", "top10_pct",
+            "fastest_lap_pct", "most_positions_gained_pct", "dnf_pct", "expected_finish",
+        ]
+        st.dataframe(race_probs[visible_columns].round(2), width="stretch", hide_index=True)
 
     heatmap_df = race_winners.copy()
     tokens = theme_tokens()
@@ -1024,6 +1036,146 @@ def render_race_view(race_winners: pd.DataFrame, calendar: pd.DataFrame, drivers
     c2.metric("Constructor", profile["constructor_strength"])
     c3.metric("Riesgo fiabilidad", profile["risk"])
     c4.metric("Forma", profile["form"])
+
+
+def render_f1_predict_view(
+    race_metrics: pd.DataFrame,
+    calendar: pd.DataFrame,
+    drivers: pd.DataFrame,
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Render the official-game question catalogue and recommended answer sheet."""
+    st.subheader("Hoja de respuestas F1 Predict")
+    st.markdown(
+        "El juego oficial publica **10 preguntas por ronda**. Las opciones pagan puntos distintos; "
+        "por eso la recomendacion usa valor esperado cuando los puntos estan disponibles. "
+        "En `Pick the podium`, acertar el piloto da los puntos base y acertar ademas su posicion los duplica. "
+        "[Reglas oficiales](https://f1predict.formula1.com/en/game-rules) · "
+        "[FAQ oficial](https://f1predict.formula1.com/faqs)"
+    )
+    available_rounds = sorted(int(value) for value in race_metrics["round"].unique())
+    if not available_rounds:
+        empty = pd.DataFrame()
+        st.info("No hay rondas simuladas para contestar preguntas.")
+        return empty, empty
+    race_names = {
+        int(row["round"]): f"R{int(row['round'])} - {row['grand_prix']}"
+        for _, row in calendar.loc[calendar["round"].isin(available_rounds)].iterrows()
+    }
+    selected_round = st.selectbox(
+        "Ronda de F1 Predict",
+        available_rounds,
+        format_func=lambda value: race_names.get(value, f"R{value}"),
+        key="f1_predict_selected_round",
+    )
+    if st.session_state.get("f1_predict_catalog_round") != selected_round:
+        st.session_state["f1_predict_catalog"] = default_question_catalog(race_metrics, selected_round)
+        st.session_state["f1_predict_catalog_round"] = selected_round
+        st.session_state["f1_predict_catalog_status"] = "fallback"
+
+    c1, c2 = st.columns([1.35, 1.0])
+    with c1:
+        if st.button(
+            "Buscar las 10 preguntas oficiales",
+            type="primary",
+            disabled=not api_key_available(),
+            help="Busca en F1 Predict las preguntas, opciones y puntos publicados para esta ronda.",
+        ):
+            try:
+                with st.spinner("Leyendo F1 Predict y verificando la ronda..."):
+                    result = call_llm_f1_predict_questions(drivers, calendar, selected_round)
+                official = result["questions"]
+                status = result["status"].iloc[0]["status"] if not result["status"].empty else "unknown"
+                if official.empty:
+                    st.warning(f"F1 Predict no expuso preguntas utilizables (estado: {status}). Se conserva el fallback.")
+                else:
+                    question_count = official["question_id"].nunique()
+                    st.session_state["f1_predict_catalog"] = official
+                    st.session_state["f1_predict_catalog_status"] = f"official:{status}"
+                    st.session_state["f1_predict_sources"] = result["sources"]
+                    if question_count != 10:
+                        st.warning(f"Se encontraron {question_count} preguntas, no 10; revisa el editor antes de usar la hoja.")
+                    st.rerun()
+            except Exception as exc:
+                st.error(f"No se pudieron obtener las preguntas de F1 Predict: {exc}")
+    with c2:
+        if st.button("Restaurar catalogo fallback", width="stretch"):
+            st.session_state["f1_predict_catalog"] = default_question_catalog(race_metrics, selected_round)
+            st.session_state["f1_predict_catalog_status"] = "fallback"
+            st.rerun()
+
+    catalog = normalize_question_catalog(st.session_state["f1_predict_catalog"])
+    is_official = not catalog.empty and catalog["is_official"].all()
+    if is_official:
+        st.success(f"Catalogo oficial cargado: {catalog['question_id'].nunique()} preguntas.")
+    else:
+        st.warning(
+            "Se usa un catalogo fallback de tipos habituales. No representa las 10 preguntas reales de la ronda; "
+            "carga las oficiales con el boton o editalas manualmente."
+        )
+
+    with st.expander("Revisar preguntas, opciones y puntos", expanded=False):
+        edited = st.data_editor(
+            catalog,
+            width="stretch",
+            num_rows="dynamic",
+            key=f"f1_predict_editor_{selected_round}_{st.session_state.get('f1_predict_catalog_status', 'fallback')}",
+            column_config={
+                "question_type": st.column_config.SelectboxColumn(
+                    "question_type",
+                    options=sorted(
+                        [
+                            "podium", "winner", "pole", "qualifying_top5", "qualifying_top10",
+                            "exact_qualifying", "fastest_lap", "fastest_pit_stop",
+                            "most_positions_gained", "safety_car", "wet_race", "red_flag", "dnf",
+                            "first_retirement", "top5", "top10", "points_finish", "exact_finish",
+                            "driver_h2h", "qualifying_h2h", "team_h2h", "team_both_top10",
+                            "sprint_winner", "sprint_podium", "sprint_pole", "winner_from_pole",
+                            "classified_count", "custom",
+                        ]
+                    ),
+                ),
+                "points": st.column_config.NumberColumn("points", min_value=0.0),
+                "is_official": st.column_config.CheckboxColumn("is_official"),
+            },
+        )
+        catalog = normalize_question_catalog(edited)
+        st.session_state["f1_predict_catalog"] = catalog
+
+    answers = answer_f1_predict_questions(catalog, race_metrics, selected_round)
+    st.session_state["f1_predict_answers"] = answers
+    st.session_state["f1_predict_answers_round"] = selected_round
+    display_columns = [
+        "question_id", "question", "recommended_answer", "model_probability_pct",
+        "game_points", "expected_game_points", "strategy",
+    ]
+    st.dataframe(
+        answers[display_columns].round(2),
+        width="stretch",
+        hide_index=True,
+        column_config={
+            "question_id": st.column_config.TextColumn("#"),
+            "question": st.column_config.TextColumn("Pregunta"),
+            "recommended_answer": st.column_config.TextColumn("Respuesta recomendada"),
+            "model_probability_pct": st.column_config.NumberColumn("Prob. modelo", format="%.1f%%"),
+            "game_points": st.column_config.TextColumn("Puntos"),
+            "expected_game_points": st.column_config.NumberColumn("Valor esperado", format="%.2f"),
+            "strategy": st.column_config.TextColumn("Criterio"),
+        },
+    )
+
+    if not answers.empty:
+        question_ids = answers["question_id"].tolist()
+        detail_question = st.selectbox("Ver alternativas", question_ids, key="f1_predict_detail_question")
+        option_scores = score_question_options(catalog, race_metrics, selected_round)
+        detail = option_scores.loc[option_scores["question_id"] == detail_question].sort_values(
+            ["expected_game_points", "model_probability_pct"], ascending=False, na_position="last"
+        )
+        st.dataframe(
+            detail[["option", "points", "model_probability_pct", "expected_game_points", "model_basis"]].head(25).round(2),
+            width="stretch",
+            hide_index=True,
+        )
+    return catalog, answers
 
 
 def render_diagnostic_view(
@@ -1109,6 +1261,8 @@ def render_model_view() -> None:
         - El paquete de cada equipo se simula con incertidumbre persistente, mayor cuando hay poca evidencia de temporada.
         - Cada circuito modifica la mezcla: carga aerodinamica, potencia, degradacion, dificultad de adelantar, clima y safety car.
         - Cada GP se simula clasificando primero y corriendo despues; los abandonos se modelan por fiabilidad y estres de pista.
+        - Para F1 Predict se conserva la distribucion completa P1-P22 y se estiman pole, podio, top 10, vuelta rapida, posiciones ganadas, cara a cara, safety car, bandera roja, clasificados y parada mas rapida.
+        - Si F1.com publica puntos distintos por opcion, la hoja recomienda por valor esperado; sin puntos, recomienda la opcion de mayor probabilidad.
         - La temporada suma puntos actuales mas carreras pendientes; los sprints pendientes pueden incluirse o apagarse.
         """
     )
@@ -1162,11 +1316,23 @@ def render_llm_view(
         return
 
     open_rounds = calendar.loc[calendar["completed"] == 0, "round"].tolist()
-    selected_round = int(open_rounds[0]) if open_rounds else int(calendar["round"].max())
-    if st.button("Buscar contexto del proximo GP", help="Consulta fuentes web para clima, sanciones, upgrades y contexto competitivo del siguiente GP."):
+    preferred_round = st.session_state.get("f1_predict_catalog_round")
+    selected_round = (
+        int(preferred_round)
+        if preferred_round in open_rounds
+        else (int(open_rounds[0]) if open_rounds else int(calendar["round"].max()))
+    )
+    question_catalog = st.session_state.get("f1_predict_catalog")
+    game_answers = st.session_state.get("f1_predict_answers")
+    if st.session_state.get("f1_predict_catalog_round") != selected_round:
+        question_catalog = None
+        game_answers = None
+    if st.button("Buscar contexto para las preguntas", help="Consulta clima, sanciones, upgrades y datos que pueden cambiar las respuestas de F1 Predict."):
         try:
-            with st.spinner("Buscando clima, parrilla, upgrades y sanciones..."):
-                st.session_state["llm_notes"] = call_llm_context_search(drivers, calendar, selected_round)
+            with st.spinner("Buscando evidencia para las opciones de F1 Predict..."):
+                st.session_state["llm_notes"] = call_llm_context_search(
+                    drivers, calendar, selected_round, questions=question_catalog
+                )
         except Exception as exc:
             st.error(f"No se pudo buscar contexto: {exc}")
 
@@ -1192,6 +1358,8 @@ def render_llm_view(
                 calendar,
                 notes,
                 diagnostics=diagnostics,
+                question_catalog=question_catalog,
+                game_answers=game_answers,
             )
             try:
                 with st.spinner("Consultando al LLM..."):
@@ -1217,6 +1385,8 @@ def render_report_actions_bar(
     drivers: pd.DataFrame,
     calendar: pd.DataFrame,
     params: SimParams,
+    question_catalog: pd.DataFrame | None = None,
+    game_answers: pd.DataFrame | None = None,
 ) -> None:
     """Render prominent report save/download actions near the top of the app."""
     report_ready = (
@@ -1238,6 +1408,16 @@ def render_report_actions_bar(
         ):
             try:
                 with st.spinner("Generando graficos, renderizando LaTeX y compilando PDF..."):
+                    persist_montecarlo_results(
+                        driver_results,
+                        constructor_results,
+                        race_winners,
+                        drivers,
+                        calendar,
+                        params,
+                        question_catalog=question_catalog,
+                        game_answers=game_answers,
+                    )
                     pdf_path = render_report(
                         driver_results,
                         constructor_results,
@@ -1246,6 +1426,8 @@ def render_report_actions_bar(
                         calendar,
                         params,
                         st.session_state.get("llm_answer", ""),
+                        question_catalog=question_catalog,
+                        game_answers=game_answers,
                     )
                 st.success(f"Reporte guardado: {pdf_path.name}")
             except Exception as exc:
@@ -1280,13 +1462,28 @@ def render_app() -> None:
         saved = latest_montecarlo_results()
         if saved is not None:
             dr, cr, rw, saved_drivers, saved_calendar = saved
-            st.session_state["simulation_results"] = (dr, cr, rw)
-            st.session_state["simulation_drivers"] = clean_drivers(saved_drivers)
-            st.session_state["simulation_calendar"] = clean_calendar(saved_calendar)
+            required_game_metrics = {
+                "win_pct", "pole_pct", "podium_pct", "fastest_lap_pct",
+                "most_positions_gained_pct", "safety_car_pct", "head_to_head_pct",
+            }
+            if required_game_metrics.issubset(rw.columns):
+                st.session_state["simulation_results"] = (dr, cr, rw)
+                st.session_state["simulation_drivers"] = clean_drivers(saved_drivers)
+                st.session_state["simulation_calendar"] = clean_calendar(saved_calendar)
+            else:
+                logger.info("Resultados persistidos anteriores a F1 Predict; se requiere una nueva simulacion")
     if "llm_answer" not in st.session_state:
         analysis = latest_llm_analysis()
         if analysis:
             st.session_state["llm_answer"] = analysis
+    if "f1_predict_catalog" not in st.session_state:
+        saved_game = latest_f1_predict_data()
+        if saved_game is not None:
+            saved_questions, saved_answers = saved_game
+            st.session_state["f1_predict_catalog"] = saved_questions
+            st.session_state["f1_predict_answers"] = saved_answers
+            if not saved_answers.empty and "question_id" in saved_answers.columns:
+                st.session_state["f1_predict_catalog_status"] = "saved"
 
     params, api_season, history_seasons = render_sidebar(default_calendar)
 
@@ -1308,7 +1505,27 @@ def render_app() -> None:
                 dataframe_to_csv_text(calendar),
                 params,
             )
-            persist_montecarlo_results(*simulation_results, drivers, calendar, params)
+            simulated_races = simulation_results[2]
+            simulated_rounds = sorted(int(value) for value in simulated_races["round"].unique())
+            fallback_questions = pd.DataFrame(columns=QUESTION_COLUMNS)
+            fallback_answers = pd.DataFrame()
+            if simulated_rounds:
+                game_round = simulated_rounds[0]
+                fallback_questions = default_question_catalog(simulated_races, game_round)
+                fallback_answers = answer_f1_predict_questions(fallback_questions, simulated_races, game_round)
+                st.session_state["f1_predict_catalog"] = fallback_questions
+                st.session_state["f1_predict_answers"] = fallback_answers
+                st.session_state["f1_predict_catalog_round"] = game_round
+                st.session_state["f1_predict_answers_round"] = game_round
+                st.session_state["f1_predict_catalog_status"] = "fallback"
+            persist_montecarlo_results(
+                *simulation_results,
+                drivers,
+                calendar,
+                params,
+                question_catalog=fallback_questions,
+                game_answers=fallback_answers,
+            )
             st.session_state["simulation_results"] = simulation_results
             st.session_state["simulation_drivers"] = drivers.copy()
             st.session_state["simulation_calendar"] = calendar.copy()
@@ -1329,13 +1546,41 @@ def render_app() -> None:
     else:
         driver_results, constructor_results, race_winners = results
 
-    render_report_actions_bar(driver_results, constructor_results, race_winners, sim_drivers, sim_calendar, sim_params)
+    question_catalog = st.session_state.get("f1_predict_catalog")
+    game_answers = st.session_state.get("f1_predict_answers")
+    if results is not None and not race_winners.empty:
+        simulated_rounds = sorted(int(value) for value in race_winners["round"].unique())
+        active_round = int(st.session_state.get("f1_predict_catalog_round", simulated_rounds[0]))
+        if active_round not in simulated_rounds:
+            active_round = simulated_rounds[0]
+        st.session_state["f1_predict_catalog_round"] = active_round
+        if question_catalog is None or question_catalog.empty:
+            question_catalog = default_question_catalog(race_winners, active_round)
+            st.session_state["f1_predict_catalog"] = question_catalog
+            st.session_state["f1_predict_catalog_round"] = active_round
+            st.session_state["f1_predict_catalog_status"] = "fallback"
+        game_answers = answer_f1_predict_questions(question_catalog, race_winners, active_round)
+        st.session_state["f1_predict_answers"] = game_answers
+        st.session_state["f1_predict_answers_round"] = active_round
+
+    render_report_actions_bar(
+        driver_results,
+        constructor_results,
+        race_winners,
+        sim_drivers,
+        sim_calendar,
+        sim_params,
+        question_catalog=question_catalog,
+        game_answers=game_answers,
+    )
 
     st.markdown("### 3 · Explorar resultados")
-    tab_drivers, tab_teams, tab_races, tab_diagnostics, tab_model, tab_llm = st.tabs(
-        ["Campeonato · Pilotos", "Campeonato · Equipos", "Proximos GP", "Por que da este resultado", "Metodologia", "Analisis con IA"]
+    tab_game, tab_races, tab_drivers, tab_teams, tab_diagnostics, tab_model, tab_llm = st.tabs(
+        ["F1 Predict · 10 respuestas", "Proximo GP", "Campeonato · Pilotos", "Campeonato · Equipos", "Por que da este resultado", "Metodologia", "Analisis con IA"]
     )
     if results is None:
+        with tab_game:
+            st.info("Pulsa **Simular campeonato** para generar la hoja de respuestas.")
         with tab_drivers:
             st.info("Pulsa **Simular campeonato** para ver probabilidades.")
         with tab_teams:
@@ -1345,6 +1590,8 @@ def render_app() -> None:
         with tab_diagnostics:
             render_diagnostic_view(None, sim_drivers, sim_calendar, sim_params)
     else:
+        with tab_game:
+            question_catalog, game_answers = render_f1_predict_view(race_winners, sim_calendar, sim_drivers)
         with tab_drivers:
             render_driver_view(driver_results)
         with tab_teams:

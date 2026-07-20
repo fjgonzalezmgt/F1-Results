@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import asdict
 from datetime import datetime
+import json
 import os
 import re
 import subprocess
@@ -82,6 +83,18 @@ def latest_montecarlo_results() -> (
         return None
 
 
+def latest_f1_predict_data() -> tuple[pd.DataFrame, pd.DataFrame] | None:
+    """Return the last saved official/fallback catalogue and answer sheet."""
+    if not MONTECARLO_RESULTS_PATH.exists():
+        return None
+    try:
+        questions = pd.read_excel(MONTECARLO_RESULTS_PATH, sheet_name="f1_predict_preguntas")
+        answers = pd.read_excel(MONTECARLO_RESULTS_PATH, sheet_name="f1_predict_respuestas")
+        return questions, answers
+    except Exception:
+        return None
+
+
 def persist_montecarlo_results(
     driver_results: pd.DataFrame,
     constructor_results: pd.DataFrame,
@@ -89,6 +102,8 @@ def persist_montecarlo_results(
     drivers: pd.DataFrame,
     calendar: pd.DataFrame,
     params: SimParams,
+    question_catalog: pd.DataFrame | None = None,
+    game_answers: pd.DataFrame | None = None,
 ) -> Path:
     """Save the latest Monte Carlo outputs as a persistent Excel workbook.
 
@@ -119,13 +134,23 @@ def persist_montecarlo_results(
     params_df = pd.DataFrame(
         [{"parametro": key, "valor": value} for key, value in asdict(params).items()]
     )
+    excel_races = race_winners.copy()
+    for column in ("head_to_head_pct", "qualifying_head_to_head_pct", "team_head_to_head_pct"):
+        if column in excel_races.columns:
+            excel_races[column] = excel_races[column].map(
+                lambda value: json.dumps(value, ensure_ascii=False) if isinstance(value, dict) else value
+            )
     with pd.ExcelWriter(MONTECARLO_RESULTS_PATH, engine="openpyxl") as writer:
         driver_results.to_excel(writer, sheet_name="pilotos", index=False)
         constructor_results.to_excel(writer, sheet_name="constructores", index=False)
-        race_winners.to_excel(writer, sheet_name="gp_probabilidades", index=False)
+        excel_races.to_excel(writer, sheet_name="gp_probabilidades", index=False)
         drivers.to_excel(writer, sheet_name="inputs_pilotos", index=False)
         calendar.to_excel(writer, sheet_name="inputs_calendario", index=False)
         params_df.to_excel(writer, sheet_name="parametros", index=False)
+        if question_catalog is not None and not question_catalog.empty:
+            question_catalog.to_excel(writer, sheet_name="f1_predict_preguntas", index=False)
+        if game_answers is not None and not game_answers.empty:
+            game_answers.to_excel(writer, sheet_name="f1_predict_respuestas", index=False)
     return MONTECARLO_RESULTS_PATH
 
 
@@ -137,6 +162,8 @@ def render_report(
     calendar: pd.DataFrame,
     params: SimParams,
     markdown_analysis: str | None = None,
+    question_catalog: pd.DataFrame | None = None,
+    game_answers: pd.DataFrame | None = None,
 ) -> Path:
     """Render the LaTeX report and compile it with pdflatex.
 
@@ -177,9 +204,13 @@ def render_report(
         If ``pdflatex`` exits with a non-zero return code.
     """
     REPORT_DIR.mkdir(parents=True, exist_ok=True)
-    analysis = (markdown_analysis or latest_llm_analysis()).strip()
+    analysis = latest_llm_analysis().strip() if markdown_analysis is None else markdown_analysis.strip()
     if not analysis:
-        raise ValueError("No hay analisis LLM persistente para generar el reporte.")
+        analysis = (
+            "## Lectura automatica\n\n"
+            "La hoja de respuestas anterior proviene directamente del Monte Carlo. "
+            "No se agrego contexto cualitativo LLM; revisa clima, sanciones y parrilla antes del cierre."
+        )
     if not REPORT_TEMPLATE_PATH.exists():
         raise FileNotFoundError(f"No existe la plantilla LaTeX: {REPORT_TEMPLATE_PATH}")
 
@@ -189,8 +220,8 @@ def render_report(
     figures = save_report_figures(driver_results, constructor_results, next_race_winners)
 
     replacements = {
-        "__REPORT_TITLE__": _latex_escape("F1 Championship Lab"),
-        "__REPORT_SUBTITLE__": _latex_escape("Monte Carlo, contexto LLM y lectura editorial"),
+        "__REPORT_TITLE__": _latex_escape("F1 Predict Decision Lab"),
+        "__REPORT_SUBTITLE__": _latex_escape("10 respuestas, Monte Carlo, contexto LLM y valor esperado"),
         "__BRAND_NAME__": _latex_escape("Gamer Insight Analytics"),
         "__BRAND_URL__": _latex_escape("gamerinsightanalytics.com"),
         "__GENERATED_AT__": _latex_escape(datetime.now().strftime("%Y-%m-%d %H:%M")),
@@ -208,9 +239,11 @@ def render_report(
         ),
         "__NEXT_RACE_TABLE__": _table_to_latex(
             next_race_winners.head(10),
-            ["driver", "team", "win_pct"],
-            ["Piloto", "Equipo", "Victoria %"],
+            ["driver", "team", "win_pct", "pole_pct", "podium_pct", "fastest_lap_pct"],
+            ["Piloto", "Equipo", "Victoria %", "Pole %", "Podio %", "V. rapida %"],
         ),
+        "__F1_PREDICT_TABLE__": _game_answers_table(game_answers),
+        "__F1_PREDICT_RULES__": _f1_predict_rules_note(question_catalog),
         "__PARAMETER_TABLE__": _params_table(params),
         "__LLM_ANALYSIS__": markdown_to_latex(analysis),
         "__DATA_NOTES__": _data_notes(drivers, calendar),
@@ -235,6 +268,54 @@ def render_report(
         log_tail = "\n".join((completed.stdout + completed.stderr).splitlines()[-20:])
         raise RuntimeError(f"pdflatex no pudo compilar el reporte:\n{log_tail}")
     return REPORT_PDF_PATH
+
+
+def _game_answers_table(game_answers: pd.DataFrame | None) -> str:
+    if game_answers is None or game_answers.empty:
+        return _key_value_table([("Estado", "No hay preguntas cargadas para esta ronda")])
+    table = game_answers.copy()
+    table["probability_display"] = table["model_probability_pct"].map(
+        lambda value: "--" if pd.isna(value) else f"{float(value):.1f}%"
+    )
+    table["expected_display"] = table["expected_game_points"].map(
+        lambda value: "--" if pd.isna(value) else f"{float(value):.2f}"
+    )
+    lines = [
+        r"\footnotesize",
+        r"\rowcolors{2}{GIASoft}{white}",
+        r"\begin{longtable}{@{}p{0.05\linewidth}p{0.34\linewidth}p{0.35\linewidth}p{0.09\linewidth}p{0.09\linewidth}@{}}",
+        r"\rowcolor{GIADark}",
+        r"\textcolor{white}{\textbf{\#}} & \textcolor{white}{\textbf{Pregunta}} & \textcolor{white}{\textbf{Respuesta}} & \textcolor{white}{\textbf{Prob.}} & \textcolor{white}{\textbf{V. esp.}} \\",
+        r"\endhead",
+    ]
+    for _, row in table.iterrows():
+        values = [
+            _format_cell(row.get("question_id", "")),
+            _format_cell(row.get("question", "")),
+            _format_cell(row.get("recommended_answer", "")),
+            _format_cell(row.get("probability_display", "")),
+            _format_cell(row.get("expected_display", "")),
+        ]
+        lines.append(" & ".join(values) + r" \\")
+    lines.extend([r"\end{longtable}", r"\rowcolors{2}{}{}", r"\normalsize"])
+    return "\n".join(lines)
+
+
+def _f1_predict_rules_note(question_catalog: pd.DataFrame | None) -> str:
+    official = bool(
+        question_catalog is not None
+        and not question_catalog.empty
+        and "is_official" in question_catalog.columns
+        and question_catalog["is_official"].all()
+    )
+    rows = [
+        ("Formato", "10 preguntas por ronda con opciones cerradas"),
+        ("Puntuacion", "Variable por opcion; el modelo prioriza valor esperado cuando hay puntos"),
+        ("Podio", "Da puntos por piloto en top 3 y duplica al acertar la posicion exacta"),
+        ("Pole", "Piloto mas rapido de Q3, aunque luego tenga sancion de parrilla"),
+        ("Catalogo", "Oficial extraido de F1 Predict" if official else "Fallback analitico; confirmar contra F1 Predict"),
+    ]
+    return _key_value_table(rows)
 
 
 def save_report_figures(

@@ -17,10 +17,12 @@ from typing import Any
 import pandas as pd
 
 from f1predictor.config import DRIVER_RATING_COLUMNS
+from f1predictor.game import QUESTION_COLUMNS, normalize_question_catalog
 from f1predictor.logging_utils import instrument_module_functions, logger
 
 
 TRUSTED_F1_DEEP_SEARCH_DOMAINS = [
+    "f1predict.formula1.com",
     "formula1.com",
     "www.formula1.com",
     "fia.com",
@@ -80,10 +82,12 @@ TRUSTED_F1_CONTEXT_SEARCH_DOMAINS = [
 ]
 
 LLM_INSTRUCTIONS = (
-    "Eres analista cuantitativo de Formula 1. Usa solo el contexto entregado. "
+    "Eres analista cuantitativo de Formula 1 especializado en F1 Predict. Usa solo el contexto entregado. "
     "Separa lo que viene del Monte Carlo de lo que viene de noticias o hipotesis. "
     "No inventes datos, lesiones, sanciones, parrillas ni clima. Responde en espanol "
-    "claro, con bullets cortos, una tesis firme y advertencias accionables."
+    "claro. Abre con una hoja de respuestas numerada para las preguntas de F1 Predict, "
+    "indicando confianza, valor esperado cuando exista puntuacion y cualquier pregunta "
+    "que requiera criterio manual. Despues resume riesgos y, de forma secundaria, el campeonato."
 )
 
 
@@ -331,7 +335,12 @@ def call_llm_formula1_official_update(
     }
 
 
-def call_llm_context_search(drivers: pd.DataFrame, calendar: pd.DataFrame, round_no: int) -> str:
+def call_llm_context_search(
+    drivers: pd.DataFrame,
+    calendar: pd.DataFrame,
+    round_no: int,
+    questions: pd.DataFrame | None = None,
+) -> str:
     """Search broad recent context for a selected Grand Prix.
 
     Queries the OpenAI Responses API with a high-context web-search tool
@@ -360,10 +369,18 @@ def call_llm_context_search(drivers: pd.DataFrame, calendar: pd.DataFrame, round
     client = OpenAI()
     race = calendar.loc[calendar["round"] == round_no].iloc[0].to_dict()
     standings = drivers[["driver", "code", "team", "current_points", "recent_form"]].to_dict(orient="records")
+    question_rows = []
+    if questions is not None and not questions.empty:
+        question_rows = (
+            questions[["question_id", "question", "question_type"]]
+            .drop_duplicates()
+            .to_dict(orient="records")
+        )
     prompt = (
         f"Fecha de consulta: {date.today().isoformat()}.\n"
         f"Gran Premio seleccionado: {json.dumps(race, ensure_ascii=False)}\n"
         f"Standings/model seed: {json.dumps(standings, ensure_ascii=False)}\n\n"
+        f"Preguntas F1 Predict que deben guiar la busqueda: {json.dumps(question_rows, ensure_ascii=False)}\n\n"
         "Haz una busqueda amplia y verificable que pueda cambiar una prediccion F1: "
         "clima local del circuito, probabilidad de lluvia/viento/temperatura, parrilla, "
         "sanciones, cambios de motor o caja, actualizaciones aerodinamicas, ritmo de tanda "
@@ -371,7 +388,9 @@ def call_llm_context_search(drivers: pd.DataFrame, calendar: pd.DataFrame, round
         "Pirelli y degradacion de neumaticos. Cruza fuentes cuando sea posible: F1/FIA para "
         "datos oficiales, Pirelli para neumaticos, meteorologia reconocida para clima, equipos "
         "para upgrades y medios especializados para analisis. Organiza por tema. Cada bullet "
-        "debe incluir fuente o URL visible. Si no hay dato confiable, dilo."
+        "debe incluir fuente o URL visible. Prioriza evidencia que ayude a escoger entre las opciones "
+        "de las preguntas F1 Predict entregadas; no inventes preguntas ni respuestas. Si no hay dato "
+        "confiable, dilo."
     )
     response = client.responses.create(
         model=model,
@@ -402,6 +421,134 @@ def call_llm_context_search(drivers: pd.DataFrame, calendar: pd.DataFrame, round
     return _extract_response_text(response)
 
 
+def call_llm_f1_predict_questions(
+    drivers: pd.DataFrame,
+    calendar: pd.DataFrame,
+    round_no: int,
+) -> dict[str, pd.DataFrame]:
+    """Discover the current round's ten official F1 Predict questions and options.
+
+    The game is a JavaScript application and its question set changes by round,
+    so this search is intentionally separate from the static rules.  Missing or
+    inaccessible questions are returned as an empty catalogue rather than being
+    invented.
+    """
+    from openai import OpenAI
+
+    race_rows = calendar.loc[calendar["round"] == round_no]
+    if race_rows.empty:
+        raise ValueError(f"No existe la ronda {round_no} en el calendario.")
+    race = race_rows.iloc[0].to_dict()
+    entrants = drivers[["driver", "code", "team"]].to_dict(orient="records")
+    schema = {
+        "questions": [
+            {
+                "question_id": "Q1",
+                "question": "Exact wording shown by F1 Predict",
+                "question_type": "podium",
+                "selection_count": 3,
+                "options": [
+                    {
+                        "option": "Driver or answer label exactly as displayed",
+                        "option_value": "three-letter driver code, team name, yes/no or canonical bin",
+                        "subject_value": "driver code/team targeted by a yes-no or position question, else blank",
+                        "opponent_value": "other driver/team for a head-to-head option, else blank",
+                        "entity_type": "driver|team|event",
+                        "target_position": None,
+                        "points": 10,
+                    }
+                ],
+                "source_url": "https://f1predict.formula1.com/en",
+            }
+        ],
+        "sources": ["https://f1predict.formula1.com/en"],
+        "status": "open|locked|not_published",
+    }
+    prompt = (
+        f"Fecha de consulta: {date.today().isoformat()}.\n"
+        f"Ronda y GP objetivo: {json.dumps(race, ensure_ascii=False)}\n"
+        f"Pilotos/equipos validos: {json.dumps(entrants, ensure_ascii=False)}\n\n"
+        "Busca en el juego oficial F1 Predict y extrae las 10 preguntas publicadas para esta ronda, "
+        "todas sus opciones y los puntos visibles junto a cada opcion. Revisa tambien Game Rules y FAQs. "
+        "No confundas F1 Predict con F1 Fantasy ni con juegos de terceros. La pregunta de pole significa "
+        "el piloto mas rapido en Q3 de la clasificacion final, aunque tenga sancion de parrilla. En podio, "
+        "selection_count es 3 y acertar posicion exacta duplica los puntos base. Usa uno de estos tipos: "
+        "podium, winner, pole, qualifying_top5, qualifying_top10, exact_qualifying, fastest_lap, "
+        "fastest_pit_stop, most_positions_gained, safety_car, wet_race, red_flag, dnf, "
+        "first_retirement, top5, top10, points_finish, exact_finish, driver_h2h, qualifying_h2h, "
+        "team_h2h, team_both_top10, sprint_winner, sprint_podium, sprint_pole, winner_from_pole, "
+        "classified_count. Si una pregunta no encaja, usa custom. "
+        "Para opciones que son pilotos usa option_value=code de tres letras; para equipos, el nombre; "
+        "para booleanos usa yes/no y coloca el piloto/equipo preguntado en subject_value. En cara a cara "
+        "usa opponent_value cuando la opcion necesite explicitar rival. Para clasificados usa le_15, "
+        "16_18 o ge_19. Devuelve SOLO JSON valido con este esquema:\n"
+        f"{json.dumps(schema, ensure_ascii=False)}\n\n"
+        "No reconstruyas ni inventes preguntas. Si la ronda esta cerrada, aun no publicada o el contenido "
+        "no es accesible, devuelve questions=[] y el status correcto."
+    )
+    model = default_model()
+    client = OpenAI()
+    response = client.responses.create(
+        model=model,
+        tools=[
+            {
+                "type": "web_search",
+                "search_context_size": "high",
+                "filters": {"allowed_domains": TRUSTED_F1_DEEP_SEARCH_DOMAINS},
+                "user_location": {
+                    "type": "approximate",
+                    "country": "US",
+                    "timezone": "America/Guatemala",
+                },
+            }
+        ],
+        tool_choice="required",
+        include=["web_search_call.action.sources"],
+        instructions=(
+            "Eres extractor del juego oficial F1 Predict. Verifica el GP y copia preguntas, opciones "
+            "y puntos sin inventar. Responde exclusivamente JSON valido."
+        ),
+        input=prompt,
+    )
+    data = _extract_json(_extract_response_text(response))
+    if not isinstance(data, dict):
+        raise ValueError("La respuesta sobre F1 Predict no fue un objeto JSON.")
+    rows: list[dict[str, Any]] = []
+    for question in data.get("questions", []) if isinstance(data.get("questions"), list) else []:
+        if not isinstance(question, dict):
+            continue
+        for option in question.get("options", []) if isinstance(question.get("options"), list) else []:
+            if not isinstance(option, dict):
+                continue
+            rows.append(
+                {
+                    "question_id": question.get("question_id"),
+                    "question": question.get("question"),
+                    "question_type": question.get("question_type"),
+                    "selection_count": question.get("selection_count", 1),
+                    "option": option.get("option"),
+                    "option_value": option.get("option_value", option.get("option")),
+                    "subject_value": option.get("subject_value"),
+                    "opponent_value": option.get("opponent_value"),
+                    "entity_type": option.get("entity_type"),
+                    "target_position": option.get("target_position"),
+                    "points": option.get("points"),
+                    "source_url": question.get("source_url", "https://f1predict.formula1.com/en"),
+                    "is_official": True,
+                }
+            )
+    questions = normalize_question_catalog(pd.DataFrame(rows, columns=QUESTION_COLUMNS))
+    sources = list(data.get("sources", [])) if isinstance(data.get("sources"), list) else []
+    for source in _extract_web_search_sources(response):
+        if source not in sources:
+            sources.append(source)
+    return {
+        "questions": questions,
+        "sources": pd.DataFrame({"source": sources}),
+        "status": pd.DataFrame([{"status": str(data.get("status", "unknown"))}]),
+    }
+
+
 def build_analysis_payload(
     driver_results: pd.DataFrame,
     constructor_results: pd.DataFrame,
@@ -411,6 +558,8 @@ def build_analysis_payload(
     notes: str,
     diagnostics: pd.DataFrame | None = None,
     scenarios: pd.DataFrame | None = None,
+    question_catalog: pd.DataFrame | None = None,
+    game_answers: pd.DataFrame | None = None,
 ) -> dict[str, Any]:
     """Create a compact payload for LLM championship interpretation.
 
@@ -450,15 +599,21 @@ def build_analysis_payload(
         "upcoming_calendar": next_races.to_dict(orient="records"),
         "qualitative_context": notes,
         "request": (
-            "Entrega un veredicto final sobre campeonato de pilotos, constructores y proximo GP. "
-            "Incluye favoritos, amenazas, escenarios base/conservador/agresivo y donde el modelo "
-            "podria estar ciego por datos cualitativos."
+            "Entrega primero la hoja final de respuestas para las 10 preguntas de F1 Predict del "
+            "proximo GP. Conserva exactamente el orden y el texto de las preguntas, explica en una "
+            "linea la evidencia cuantitativa/cualitativa y marca confianza. Si hay puntos, distingue "
+            "la opcion mas probable de la de mayor valor esperado. Despues resume riesgos del GP y "
+            "solo al final agrega una nota breve de campeonato de pilotos y constructores."
         ),
     }
     if diagnostics is not None and not diagnostics.empty:
         payload["model_diagnostics"] = diagnostics.head(12).round(2).to_dict(orient="records")
     if scenarios is not None and not scenarios.empty:
         payload["scenario_summary"] = scenarios.round(2).to_dict(orient="records")
+    if question_catalog is not None and not question_catalog.empty:
+        payload["f1_predict_question_catalog"] = question_catalog.where(pd.notna(question_catalog), None).to_dict(orient="records")
+    if game_answers is not None and not game_answers.empty:
+        payload["f1_predict_recommended_answers"] = game_answers.where(pd.notna(game_answers), None).to_dict(orient="records")
     return payload
 
 

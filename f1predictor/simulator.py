@@ -437,9 +437,9 @@ def simulate_many(
         * **constructor_df** – Constructor championship summary with
           columns ``team``, ``current_points``, ``expected_points``,
           ``avg_final_rank``, ``champion_pct`` and ``top3_pct``.
-        * **race_df** – Per-race winner probabilities with columns
-          ``round``, ``grand_prix``, ``driver``, ``code``, ``team`` and
-          ``win_pct``.
+        * **race_df** – Per-driver/per-race metrics used by F1 Predict,
+          including win, pole, podium, position distribution, top-10, DNF,
+          fastest lap, places gained, head-to-head and event probabilities.
     """
     clean_dr = clean_drivers(drivers)
     clean_cal = clean_calendar(calendar)
@@ -519,7 +519,32 @@ def simulate_many(
     constructor_rank_sum = np.zeros(n_teams, dtype=float)
 
     race_rows_meta = remaining[["round", "grand_prix"]].to_dict(orient="records")
-    race_winner_counts = np.zeros((len(race_rows_meta), n_drivers), dtype=float)
+    n_races = len(race_rows_meta)
+    race_winner_counts = np.zeros((n_races, n_drivers), dtype=float)
+    finish_position_counts = np.zeros((n_races, n_drivers, n_drivers), dtype=float)
+    qualifying_position_counts = np.zeros((n_races, n_drivers, n_drivers), dtype=float)
+    dnf_counts = np.zeros((n_races, n_drivers), dtype=float)
+    fastest_lap_counts = np.zeros((n_races, n_drivers), dtype=float)
+    first_retirement_counts = np.zeros((n_races, n_drivers), dtype=float)
+    most_places_gained_counts = np.zeros((n_races, n_drivers), dtype=float)
+    head_to_head_counts = np.zeros((n_races, n_drivers, n_drivers), dtype=float)
+    qualifying_head_to_head_counts = np.zeros((n_races, n_drivers, n_drivers), dtype=float)
+    sprint_winner_counts = np.zeros((n_races, n_drivers), dtype=float)
+    sprint_podium_counts = np.zeros((n_races, n_drivers), dtype=float)
+    sprint_pole_counts = np.zeros((n_races, n_drivers), dtype=float)
+    fastest_pit_stop_counts = np.zeros((n_races, n_teams), dtype=float)
+    team_points_sum_by_race = np.zeros((n_races, n_teams), dtype=float)
+    team_head_to_head_counts = np.zeros((n_races, n_teams, n_teams), dtype=float)
+    safety_car_counts = np.zeros(n_races, dtype=float)
+    wet_race_counts = np.zeros(n_races, dtype=float)
+    red_flag_counts = np.zeros(n_races, dtype=float)
+    winner_from_pole_counts = np.zeros(n_races, dtype=float)
+    classified_count_sums = np.zeros(n_races, dtype=float)
+    classified_le_15_counts = np.zeros(n_races, dtype=float)
+    classified_16_18_counts = np.zeros(n_races, dtype=float)
+    classified_ge_19_counts = np.zeros(n_races, dtype=float)
+    teams_scoring_sums = np.zeros(n_races, dtype=float)
+    team_both_top10_counts = np.zeros((n_races, n_teams), dtype=float)
 
     race_point_values = np.array(RACE_POINTS, dtype=float)
     sprint_point_values = np.array(SPRINT_POINTS, dtype=float)
@@ -549,7 +574,7 @@ def simulate_many(
         sprint: bool,
         team_adjustment_by_driver: np.ndarray,
         form_scale: float,
-    ) -> tuple[np.ndarray, int]:
+    ) -> dict[str, Any]:
         """Simulate one vectorised sprint or race session.
 
         Parameters
@@ -566,8 +591,8 @@ def simulate_many(
 
         Returns
         -------
-        tuple[np.ndarray, int]
-            Session points by driver index and the winning driver index.
+        dict[str, Any]
+            Session points plus qualifying/finish orders and event outcomes.
         """
         fit = event_fit_vector(race)
         weather_qualifying = rng.random() < race["weather_risk"] / 100.0 * params.weather_multiplier
@@ -610,11 +635,40 @@ def simulate_many(
         score = np.where(dnf, -999.0 + rng.normal(0.0, 4.0, size=n_drivers), score)
 
         finishing_order = np.argsort(-score)
+        finishing_position = np.empty(n_drivers, dtype=int)
+        finishing_position[finishing_order] = np.arange(1, n_drivers + 1)
         point_values = sprint_point_values if sprint else race_point_values
         session_points = np.zeros(n_drivers, dtype=float)
         paying_positions = min(len(point_values), n_drivers)
         session_points[finishing_order[:paying_positions]] = point_values[:paying_positions]
-        return session_points, int(finishing_order[0])
+
+        fastest_lap_score = (
+            0.42 * race_pace
+            + 0.20 * team_pace
+            + 0.16 * tyre_management
+            + 0.12 * driver_rating
+            + 0.10 * strategy
+            + team_adjustment_by_driver
+            + rng.normal(0.0, params.chaos * (0.95 if sprint else 1.15), size=n_drivers)
+        )
+        fastest_lap_score = np.where(dnf, -999.0, fastest_lap_score)
+        fastest_lap_idx = int(np.argmax(fastest_lap_score))
+        places_gained = grid_position - finishing_position
+        max_places_gained = float(np.max(places_gained))
+        most_places_gained = np.flatnonzero(places_gained == max_places_gained)
+        return {
+            "points": session_points,
+            "winner_idx": int(finishing_order[0]),
+            "qualifying_order": qualifying_order,
+            "finishing_order": finishing_order,
+            "finishing_position": finishing_position,
+            "grid_position": grid_position.astype(int),
+            "dnf": dnf,
+            "fastest_lap_idx": fastest_lap_idx,
+            "most_places_gained": most_places_gained,
+            "safety_car": bool(safety_car),
+            "wet_race": bool(wet_race),
+        }
 
     progress_interval = max(1, params.simulations // 10)
     for simulation_index in range(params.simulations):
@@ -635,24 +689,97 @@ def simulate_many(
             form_scale = _form_scale_for_race(race_index, params)
 
             if params.include_sprints and int(race["sprint_remaining"]) == 1:
-                sprint_points, _winner_idx = run_session(
+                sprint_result = run_session(
                     race,
                     sprint=True,
                     team_adjustment_by_driver=team_adjustment_by_driver,
                     form_scale=form_scale,
                 )
+                sprint_points = sprint_result["points"]
                 points += sprint_points
                 np.add.at(team_points, team_idx, sprint_points)
+                sprint_winner_counts[race_index, sprint_result["winner_idx"]] += 1
+                sprint_podium_counts[race_index, sprint_result["finishing_order"][:3]] += 1
+                sprint_pole_counts[race_index, sprint_result["qualifying_order"][0]] += 1
 
-            race_points, winner_idx = run_session(
+            race_result = run_session(
                 race,
                 sprint=False,
                 team_adjustment_by_driver=team_adjustment_by_driver,
                 form_scale=form_scale,
             )
+            race_points = race_result["points"]
+            winner_idx = race_result["winner_idx"]
             points += race_points
             np.add.at(team_points, team_idx, race_points)
             race_winner_counts[race_index, winner_idx] += 1
+
+            qualifying_order = race_result["qualifying_order"]
+            finishing_order = race_result["finishing_order"]
+            finishing_position = race_result["finishing_position"]
+            for position_index, driver_idx in enumerate(qualifying_order):
+                qualifying_position_counts[race_index, driver_idx, position_index] += 1
+            for position_index, driver_idx in enumerate(finishing_order):
+                finish_position_counts[race_index, driver_idx, position_index] += 1
+            dnf_counts[race_index] += race_result["dnf"].astype(float)
+            retired_indices = np.flatnonzero(race_result["dnf"])
+            if len(retired_indices):
+                first_retirement_counts[race_index, int(rng.choice(retired_indices))] += 1
+            fastest_lap_counts[race_index, race_result["fastest_lap_idx"]] += 1
+            gained_indices = race_result["most_places_gained"]
+            most_places_gained_counts[race_index, gained_indices] += 1.0 / max(1, len(gained_indices))
+            head_to_head_counts[race_index] += (
+                finishing_position[:, None] < finishing_position[None, :]
+            ).astype(float)
+            qualifying_position = np.empty(n_drivers, dtype=int)
+            qualifying_position[qualifying_order] = np.arange(1, n_drivers + 1)
+            qualifying_head_to_head_counts[race_index] += (
+                qualifying_position[:, None] < qualifying_position[None, :]
+            ).astype(float)
+
+            race_team_points = np.zeros(n_teams, dtype=float)
+            np.add.at(race_team_points, team_idx, race_points)
+            team_points_sum_by_race[race_index] += race_team_points
+            teams_scoring_sums[race_index] += float(np.sum(race_team_points > 0))
+            for current_team_idx in range(n_teams):
+                members = np.flatnonzero(team_idx == current_team_idx)
+                if len(members) and np.all(finishing_position[members] <= 10):
+                    team_both_top10_counts[race_index, current_team_idx] += 1
+            team_head_to_head_counts[race_index] += (
+                race_team_points[:, None] > race_team_points[None, :]
+            ).astype(float)
+            team_ties = race_team_points[:, None] == race_team_points[None, :]
+            team_head_to_head_counts[race_index] += 0.5 * team_ties.astype(float)
+
+            team_strategy = np.array(
+                [float(np.mean(strategy[team_idx == idx])) for idx in range(n_teams)]
+            )
+            team_reliability = np.array(
+                [float(np.mean(reliability[team_idx == idx])) for idx in range(n_teams)]
+            )
+            pit_score = (
+                0.72 * team_strategy
+                + 0.28 * team_reliability
+                + rng.normal(0.0, params.chaos * 1.8, size=n_teams)
+            )
+            fastest_pit_stop_counts[race_index, int(np.argmax(pit_score))] += 1
+
+            safety_car_counts[race_index] += float(race_result["safety_car"])
+            wet_race_counts[race_index] += float(race_result["wet_race"])
+            red_flag_probability = np.clip(
+                0.015
+                + 0.0010 * float(race["safety_car_risk"])
+                + 0.00045 * float(race["weather_risk"]),
+                0.01,
+                0.18,
+            )
+            red_flag_counts[race_index] += float(rng.random() < red_flag_probability)
+            winner_from_pole_counts[race_index] += float(winner_idx == int(qualifying_order[0]))
+            classified_count = int(n_drivers - np.sum(race_result["dnf"]))
+            classified_count_sums[race_index] += classified_count
+            classified_le_15_counts[race_index] += float(classified_count <= 15)
+            classified_16_18_counts[race_index] += float(16 <= classified_count <= 18)
+            classified_ge_19_counts[race_index] += float(classified_count >= 19)
 
         driver_order = np.argsort(-points)
         ranks = np.empty(n_drivers, dtype=float)
@@ -700,9 +827,43 @@ def simulate_many(
 
     race_rows = []
     for race_index, meta in enumerate(race_rows_meta):
+        event_values = {
+            "safety_car_pct": 100 * safety_car_counts[race_index] / params.simulations,
+            "wet_race_pct": 100 * wet_race_counts[race_index] / params.simulations,
+            "red_flag_pct": 100 * red_flag_counts[race_index] / params.simulations,
+            "winner_from_pole_pct": 100 * winner_from_pole_counts[race_index] / params.simulations,
+            "expected_classified": classified_count_sums[race_index] / params.simulations,
+            "classified_le_15_pct": 100 * classified_le_15_counts[race_index] / params.simulations,
+            "classified_16_18_pct": 100 * classified_16_18_counts[race_index] / params.simulations,
+            "classified_ge_19_pct": 100 * classified_ge_19_counts[race_index] / params.simulations,
+        }
         for driver_idx, count in enumerate(race_winner_counts[race_index]):
-            if count <= 0:
-                continue
+            finish_distribution = finish_position_counts[race_index, driver_idx] / params.simulations
+            qualifying_distribution = qualifying_position_counts[race_index, driver_idx] / params.simulations
+            h2h = {
+                str(codes[opponent_idx]): round(
+                    100 * head_to_head_counts[race_index, driver_idx, opponent_idx] / params.simulations,
+                    4,
+                )
+                for opponent_idx in range(n_drivers)
+                if opponent_idx != driver_idx
+            }
+            qualifying_h2h = {
+                str(codes[opponent_idx]): round(
+                    100 * qualifying_head_to_head_counts[race_index, driver_idx, opponent_idx] / params.simulations,
+                    4,
+                )
+                for opponent_idx in range(n_drivers)
+                if opponent_idx != driver_idx
+            }
+            team_h2h = {
+                str(teams[opponent_idx]): round(
+                    100 * team_head_to_head_counts[race_index, team_idx[driver_idx], opponent_idx] / params.simulations,
+                    4,
+                )
+                for opponent_idx in range(n_teams)
+                if opponent_idx != team_idx[driver_idx]
+            }
             race_rows.append(
                 {
                     "round": int(meta["round"]),
@@ -711,6 +872,43 @@ def simulate_many(
                     "code": codes[driver_idx],
                     "team": driver_teams[driver_idx],
                     "win_pct": 100 * count / params.simulations,
+                    "pole_pct": 100 * qualifying_distribution[0],
+                    "qualifying_top5_pct": 100 * qualifying_distribution[:5].sum(),
+                    "qualifying_top10_pct": 100 * qualifying_distribution[:10].sum(),
+                    "podium_pct": 100 * finish_distribution[:3].sum(),
+                    "top5_pct": 100 * finish_distribution[:5].sum(),
+                    "top10_pct": 100 * finish_distribution[:10].sum(),
+                    "points_pct": 100 * finish_distribution[: min(10, n_drivers)].sum(),
+                    "dnf_pct": 100 * dnf_counts[race_index, driver_idx] / params.simulations,
+                    "first_retirement_pct": 100 * first_retirement_counts[race_index, driver_idx] / params.simulations,
+                    "fastest_lap_pct": 100 * fastest_lap_counts[race_index, driver_idx] / params.simulations,
+                    "most_positions_gained_pct": 100 * most_places_gained_counts[race_index, driver_idx] / params.simulations,
+                    "expected_finish": float(np.dot(finish_distribution, np.arange(1, n_drivers + 1))),
+                    "expected_race_points": float(
+                        np.dot(
+                            finish_distribution[: min(len(race_point_values), n_drivers)],
+                            race_point_values[: min(len(race_point_values), n_drivers)],
+                        )
+                    ),
+                    "team_expected_points": team_points_sum_by_race[race_index, team_idx[driver_idx]] / params.simulations,
+                    "team_fastest_pit_stop_pct": 100 * fastest_pit_stop_counts[race_index, team_idx[driver_idx]] / params.simulations,
+                    "team_both_top10_pct": 100 * team_both_top10_counts[race_index, team_idx[driver_idx]] / params.simulations,
+                    "expected_teams_scoring": teams_scoring_sums[race_index] / params.simulations,
+                    "sprint_win_pct": 100 * sprint_winner_counts[race_index, driver_idx] / params.simulations,
+                    "sprint_podium_pct": 100 * sprint_podium_counts[race_index, driver_idx] / params.simulations,
+                    "sprint_pole_pct": 100 * sprint_pole_counts[race_index, driver_idx] / params.simulations,
+                    "head_to_head_pct": h2h,
+                    "qualifying_head_to_head_pct": qualifying_h2h,
+                    "team_head_to_head_pct": team_h2h,
+                    **{
+                        f"p{position + 1}_pct": 100 * finish_distribution[position]
+                        for position in range(n_drivers)
+                    },
+                    **{
+                        f"q{position + 1}_pct": 100 * qualifying_distribution[position]
+                        for position in range(n_drivers)
+                    },
+                    **event_values,
                 }
             )
 

@@ -33,7 +33,7 @@
 \pagestyle{fancy}
 \fancyhf{}
 \lhead{\textcolor{GIACyan}{\small __BRAND_NAME__}}
-\rhead{\textcolor{GIAText}{\small F1 Monte Carlo Report}}
+\rhead{\textcolor{GIAText}{\small F1 Predict Decision Report}}
 \cfoot{\textcolor{GIAText}{\small \thepage}}
 \renewcommand{\headrulewidth}{0.4pt}
 \renewcommand{\headrule}{\hbox to\headwidth{\color{GIACyan}\leaders\hrule height \headrulewidth\hfill}}
@@ -90,6 +90,19 @@
 \GIASection{Resumen ejecutivo}
 __SIMULATION_SUMMARY__
 
+\GIASection{Hoja de respuestas F1 Predict}
+__F1_PREDICT_TABLE__
+
+\GIASection{Reglas aplicadas}
+__F1_PREDICT_RULES__
+
+\newpage
+\GIASection{Proximo Gran Premio}
+__NEXT_RACE_CHART__
+
+\vspace{-0.4em}
+__NEXT_RACE_TABLE__
+
 \GIASection{Campeonato de pilotos}
 __DRIVER_CHART__
 
@@ -101,12 +114,6 @@ __CONSTRUCTOR_CHART__
 
 \vspace{-0.4em}
 __CONSTRUCTOR_TABLE__
-
-\GIASection{Proximo Gran Premio}
-__NEXT_RACE_CHART__
-
-\vspace{-0.4em}
-__NEXT_RACE_TABLE__
 
 \GIASection{Parametros de simulacion}
 __PARAMETER_TABLE__
