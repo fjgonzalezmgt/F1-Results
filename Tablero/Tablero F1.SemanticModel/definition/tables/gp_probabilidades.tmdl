@@ -80,6 +80,606 @@ table gp_probabilidades
 
 		annotation PBI_FormatHint = {"isGeneralNumber":true}
 
+	column pole_pct
+		dataType: string
+		lineageTag: dde4812e-4974-4ce4-83e1-287e2fe28238
+		summarizeBy: none
+		sourceColumn: pole_pct
+
+		annotation SummarizationSetBy = Automatic
+
+	column qualifying_top5_pct
+		dataType: string
+		lineageTag: cbe59f37-da18-4681-a970-ee0667a12ce7
+		summarizeBy: none
+		sourceColumn: qualifying_top5_pct
+
+		annotation SummarizationSetBy = Automatic
+
+	column qualifying_top10_pct
+		dataType: string
+		lineageTag: eaae37a1-0735-43c9-af12-1c736ed94894
+		summarizeBy: none
+		sourceColumn: qualifying_top10_pct
+
+		annotation SummarizationSetBy = Automatic
+
+	column podium_pct
+		dataType: string
+		lineageTag: ea891c49-4983-446b-8d58-8b56c821243e
+		summarizeBy: none
+		sourceColumn: podium_pct
+
+		annotation SummarizationSetBy = Automatic
+
+	column top5_pct
+		dataType: string
+		lineageTag: 8247413c-ee44-457e-805b-d29c145add4d
+		summarizeBy: none
+		sourceColumn: top5_pct
+
+		annotation SummarizationSetBy = Automatic
+
+	column top10_pct
+		dataType: string
+		lineageTag: 11844947-0027-4f9f-a1ee-fc57c51fd100
+		summarizeBy: none
+		sourceColumn: top10_pct
+
+		annotation SummarizationSetBy = Automatic
+
+	column points_pct
+		dataType: string
+		lineageTag: 64692e7d-cb08-4840-b544-2f9b0502cc35
+		summarizeBy: none
+		sourceColumn: points_pct
+
+		annotation SummarizationSetBy = Automatic
+
+	column dnf_pct
+		dataType: string
+		lineageTag: 93a046c2-ab17-4a7c-9b2a-379793138b72
+		summarizeBy: none
+		sourceColumn: dnf_pct
+
+		annotation SummarizationSetBy = Automatic
+
+	column first_retirement_pct
+		dataType: string
+		lineageTag: 3d522cb5-af6c-4384-94ba-fbce71535fc1
+		summarizeBy: none
+		sourceColumn: first_retirement_pct
+
+		annotation SummarizationSetBy = Automatic
+
+	column fastest_lap_pct
+		dataType: string
+		lineageTag: e5a22856-d5fc-4d04-9dd3-06820788322b
+		summarizeBy: none
+		sourceColumn: fastest_lap_pct
+
+		annotation SummarizationSetBy = Automatic
+
+	column most_positions_gained_pct
+		dataType: string
+		lineageTag: 3f4d8515-a180-4fa0-9775-5e8978c689ff
+		summarizeBy: none
+		sourceColumn: most_positions_gained_pct
+
+		annotation SummarizationSetBy = Automatic
+
+	column expected_finish
+		dataType: string
+		lineageTag: 183037f7-a175-49fa-b765-5989ca1b8572
+		summarizeBy: none
+		sourceColumn: expected_finish
+
+		annotation SummarizationSetBy = Automatic
+
+	column expected_race_points
+		dataType: string
+		lineageTag: 71f2b2da-5ca7-4f94-8c1f-87650e4f6f4f
+		summarizeBy: none
+		sourceColumn: expected_race_points
+
+		annotation SummarizationSetBy = Automatic
+
+	column team_expected_points
+		dataType: string
+		lineageTag: 0e25372c-a105-488b-8dca-8315455c5d58
+		summarizeBy: none
+		sourceColumn: team_expected_points
+
+		annotation SummarizationSetBy = Automatic
+
+	column team_fastest_pit_stop_pct
+		dataType: string
+		lineageTag: 5791c919-b439-4705-88a6-8741cef71411
+		summarizeBy: none
+		sourceColumn: team_fastest_pit_stop_pct
+
+		annotation SummarizationSetBy = Automatic
+
+	column team_both_top10_pct
+		dataType: string
+		lineageTag: df77fc3b-f47e-48d6-928e-9e63cc2c751c
+		summarizeBy: none
+		sourceColumn: team_both_top10_pct
+
+		annotation SummarizationSetBy = Automatic
+
+	column expected_teams_scoring
+		dataType: string
+		lineageTag: d49eddde-8345-42e5-a368-260d52f09b2f
+		summarizeBy: none
+		sourceColumn: expected_teams_scoring
+
+		annotation SummarizationSetBy = Automatic
+
+	column sprint_win_pct
+		dataType: string
+		lineageTag: 075cff3a-bcaa-4df8-94ef-3fab5e87ab96
+		summarizeBy: none
+		sourceColumn: sprint_win_pct
+
+		annotation SummarizationSetBy = Automatic
+
+	column sprint_podium_pct
+		dataType: string
+		lineageTag: afe05e4f-b871-4e7b-a32a-9ec3f2535fe8
+		summarizeBy: none
+		sourceColumn: sprint_podium_pct
+
+		annotation SummarizationSetBy = Automatic
+
+	column sprint_pole_pct
+		dataType: string
+		lineageTag: fc02aa9f-296c-4831-93df-9521a5463bc6
+		summarizeBy: none
+		sourceColumn: sprint_pole_pct
+
+		annotation SummarizationSetBy = Automatic
+
+	column head_to_head_pct
+		dataType: string
+		lineageTag: 84875193-4cf4-4341-a28e-dcf94a97e95a
+		summarizeBy: none
+		sourceColumn: head_to_head_pct
+
+		annotation SummarizationSetBy = Automatic
+
+	column qualifying_head_to_head_pct
+		dataType: string
+		lineageTag: e763bb68-6a16-4468-830e-d81329a93650
+		summarizeBy: none
+		sourceColumn: qualifying_head_to_head_pct
+
+		annotation SummarizationSetBy = Automatic
+
+	column team_head_to_head_pct
+		dataType: string
+		lineageTag: 8b295798-1bd8-4d82-b6bf-09bfa5e445b5
+		summarizeBy: none
+		sourceColumn: team_head_to_head_pct
+
+		annotation SummarizationSetBy = Automatic
+
+	column p1_pct
+		dataType: string
+		lineageTag: 7aa846b9-a0d6-4224-94b1-a47ada1ffdfa
+		summarizeBy: none
+		sourceColumn: p1_pct
+
+		annotation SummarizationSetBy = Automatic
+
+	column p2_pct
+		dataType: string
+		lineageTag: 1b475537-c600-4883-914f-3cca33139cff
+		summarizeBy: none
+		sourceColumn: p2_pct
+
+		annotation SummarizationSetBy = Automatic
+
+	column p3_pct
+		dataType: string
+		lineageTag: e85cf65e-0d2c-4c99-b14d-03cb7d8b8328
+		summarizeBy: none
+		sourceColumn: p3_pct
+
+		annotation SummarizationSetBy = Automatic
+
+	column p4_pct
+		dataType: string
+		lineageTag: 4b136924-707b-402c-9593-a3e18d770176
+		summarizeBy: none
+		sourceColumn: p4_pct
+
+		annotation SummarizationSetBy = Automatic
+
+	column p5_pct
+		dataType: string
+		lineageTag: 63807c64-081d-469f-b673-4f71162f5501
+		summarizeBy: none
+		sourceColumn: p5_pct
+
+		annotation SummarizationSetBy = Automatic
+
+	column p6_pct
+		dataType: string
+		lineageTag: eb88dbad-ca69-4c1c-b295-06a518eaefcb
+		summarizeBy: none
+		sourceColumn: p6_pct
+
+		annotation SummarizationSetBy = Automatic
+
+	column p7_pct
+		dataType: string
+		lineageTag: 18f0e748-9466-4feb-bc7a-6e6fd9c199f8
+		summarizeBy: none
+		sourceColumn: p7_pct
+
+		annotation SummarizationSetBy = Automatic
+
+	column p8_pct
+		dataType: string
+		lineageTag: 8a70c4d9-37ad-4e33-ad30-fad08d1c311c
+		summarizeBy: none
+		sourceColumn: p8_pct
+
+		annotation SummarizationSetBy = Automatic
+
+	column p9_pct
+		dataType: string
+		lineageTag: 78aa9932-258d-43f4-9e04-0dd9b53e6940
+		summarizeBy: none
+		sourceColumn: p9_pct
+
+		annotation SummarizationSetBy = Automatic
+
+	column p10_pct
+		dataType: string
+		lineageTag: ee52ea14-862c-4790-80c5-72ad0f29831c
+		summarizeBy: none
+		sourceColumn: p10_pct
+
+		annotation SummarizationSetBy = Automatic
+
+	column p11_pct
+		dataType: string
+		lineageTag: 2ef03c41-52d6-436e-96b4-dc78881989b0
+		summarizeBy: none
+		sourceColumn: p11_pct
+
+		annotation SummarizationSetBy = Automatic
+
+	column p12_pct
+		dataType: string
+		lineageTag: d8128f88-879d-4ef3-a60e-ff0261c11b31
+		summarizeBy: none
+		sourceColumn: p12_pct
+
+		annotation SummarizationSetBy = Automatic
+
+	column p13_pct
+		dataType: string
+		lineageTag: 492e8dd4-34ca-4780-9b1e-5c8ddd7911ed
+		summarizeBy: none
+		sourceColumn: p13_pct
+
+		annotation SummarizationSetBy = Automatic
+
+	column p14_pct
+		dataType: string
+		lineageTag: 6665a82f-01f7-4db0-80d5-8a0ed0241cce
+		summarizeBy: none
+		sourceColumn: p14_pct
+
+		annotation SummarizationSetBy = Automatic
+
+	column p15_pct
+		dataType: string
+		lineageTag: 0c764b78-33e9-4de7-9512-614a3db5fd2e
+		summarizeBy: none
+		sourceColumn: p15_pct
+
+		annotation SummarizationSetBy = Automatic
+
+	column p16_pct
+		dataType: string
+		lineageTag: 2f59f16b-7058-4f57-bd7d-01a3dc20a2f6
+		summarizeBy: none
+		sourceColumn: p16_pct
+
+		annotation SummarizationSetBy = Automatic
+
+	column p17_pct
+		dataType: string
+		lineageTag: 7c711cee-01b4-4a06-98ed-0a80897d75c9
+		summarizeBy: none
+		sourceColumn: p17_pct
+
+		annotation SummarizationSetBy = Automatic
+
+	column p18_pct
+		dataType: string
+		lineageTag: 52d78808-5fd1-4d45-a562-9b3b6d2b67c4
+		summarizeBy: none
+		sourceColumn: p18_pct
+
+		annotation SummarizationSetBy = Automatic
+
+	column p19_pct
+		dataType: string
+		lineageTag: 43d887ef-9a6e-43cb-a915-ae56f68f6526
+		summarizeBy: none
+		sourceColumn: p19_pct
+
+		annotation SummarizationSetBy = Automatic
+
+	column p20_pct
+		dataType: string
+		lineageTag: 6323e3bc-c3e3-4b06-bbc7-84ca5c20acf4
+		summarizeBy: none
+		sourceColumn: p20_pct
+
+		annotation SummarizationSetBy = Automatic
+
+	column p21_pct
+		dataType: string
+		lineageTag: bac09af5-7dc5-48ce-8a7c-796100a13616
+		summarizeBy: none
+		sourceColumn: p21_pct
+
+		annotation SummarizationSetBy = Automatic
+
+	column p22_pct
+		dataType: string
+		lineageTag: b6eecd7d-2bc4-43b1-a3dd-9d7972c5a136
+		summarizeBy: none
+		sourceColumn: p22_pct
+
+		annotation SummarizationSetBy = Automatic
+
+	column q1_pct
+		dataType: string
+		lineageTag: 81f3a9fb-c42f-4bf3-91cd-5b8dbed23d49
+		summarizeBy: none
+		sourceColumn: q1_pct
+
+		annotation SummarizationSetBy = Automatic
+
+	column q2_pct
+		dataType: string
+		lineageTag: 5bbc5d93-22f8-464a-be3d-111c1434e01e
+		summarizeBy: none
+		sourceColumn: q2_pct
+
+		annotation SummarizationSetBy = Automatic
+
+	column q3_pct
+		dataType: string
+		lineageTag: 2fdc14a9-8758-4b14-b79d-b4b76e2f90de
+		summarizeBy: none
+		sourceColumn: q3_pct
+
+		annotation SummarizationSetBy = Automatic
+
+	column q4_pct
+		dataType: string
+		lineageTag: 19cc8518-9755-4346-a2b6-e2e4cab6d283
+		summarizeBy: none
+		sourceColumn: q4_pct
+
+		annotation SummarizationSetBy = Automatic
+
+	column q5_pct
+		dataType: string
+		lineageTag: b2f5ed8f-8910-41cf-ae92-1b6e3d82256a
+		summarizeBy: none
+		sourceColumn: q5_pct
+
+		annotation SummarizationSetBy = Automatic
+
+	column q6_pct
+		dataType: string
+		lineageTag: 0870303b-4d33-4b3f-8d8f-34527f85e07a
+		summarizeBy: none
+		sourceColumn: q6_pct
+
+		annotation SummarizationSetBy = Automatic
+
+	column q7_pct
+		dataType: string
+		lineageTag: f77181b9-699f-4b35-9ce2-a020e66bfd6a
+		summarizeBy: none
+		sourceColumn: q7_pct
+
+		annotation SummarizationSetBy = Automatic
+
+	column q8_pct
+		dataType: string
+		lineageTag: a9c7e01f-0b42-4e1d-a803-472efd750f42
+		summarizeBy: none
+		sourceColumn: q8_pct
+
+		annotation SummarizationSetBy = Automatic
+
+	column q9_pct
+		dataType: string
+		lineageTag: 5411dc3a-6c64-4d4a-b2a2-57007cb8f2fa
+		summarizeBy: none
+		sourceColumn: q9_pct
+
+		annotation SummarizationSetBy = Automatic
+
+	column q10_pct
+		dataType: string
+		lineageTag: 4e5bb655-f3fa-4089-9870-f5fa6cf98df5
+		summarizeBy: none
+		sourceColumn: q10_pct
+
+		annotation SummarizationSetBy = Automatic
+
+	column q11_pct
+		dataType: string
+		lineageTag: 06fe6643-bf4b-415f-8712-e7fdc31e24c6
+		summarizeBy: none
+		sourceColumn: q11_pct
+
+		annotation SummarizationSetBy = Automatic
+
+	column q12_pct
+		dataType: string
+		lineageTag: 7c1f5684-0ffc-4767-a212-831d2400e85b
+		summarizeBy: none
+		sourceColumn: q12_pct
+
+		annotation SummarizationSetBy = Automatic
+
+	column q13_pct
+		dataType: string
+		lineageTag: d8b6c955-0077-445d-870a-6b1c71ce6865
+		summarizeBy: none
+		sourceColumn: q13_pct
+
+		annotation SummarizationSetBy = Automatic
+
+	column q14_pct
+		dataType: string
+		lineageTag: e62d5ffd-4c26-4b63-bad6-edd4886ca18f
+		summarizeBy: none
+		sourceColumn: q14_pct
+
+		annotation SummarizationSetBy = Automatic
+
+	column q15_pct
+		dataType: string
+		lineageTag: 83be63c8-7507-4453-bb20-cb797301ab8c
+		summarizeBy: none
+		sourceColumn: q15_pct
+
+		annotation SummarizationSetBy = Automatic
+
+	column q16_pct
+		dataType: string
+		lineageTag: 357905b7-a8e7-4fdb-9ed4-6428459c46e1
+		summarizeBy: none
+		sourceColumn: q16_pct
+
+		annotation SummarizationSetBy = Automatic
+
+	column q17_pct
+		dataType: string
+		lineageTag: 42460813-ba2d-4a41-abf3-b06a9a1c82f6
+		summarizeBy: none
+		sourceColumn: q17_pct
+
+		annotation SummarizationSetBy = Automatic
+
+	column q18_pct
+		dataType: string
+		lineageTag: 09b414aa-4f65-49c4-bf67-1516c58acf62
+		summarizeBy: none
+		sourceColumn: q18_pct
+
+		annotation SummarizationSetBy = Automatic
+
+	column q19_pct
+		dataType: string
+		lineageTag: 5012fa10-1614-454e-aa7d-755d500daa75
+		summarizeBy: none
+		sourceColumn: q19_pct
+
+		annotation SummarizationSetBy = Automatic
+
+	column q20_pct
+		dataType: string
+		lineageTag: 8fcd1880-251c-405a-9c1d-8585acb6416f
+		summarizeBy: none
+		sourceColumn: q20_pct
+
+		annotation SummarizationSetBy = Automatic
+
+	column q21_pct
+		dataType: string
+		lineageTag: d18d7e87-e3ce-4082-96ae-d140acc33320
+		summarizeBy: none
+		sourceColumn: q21_pct
+
+		annotation SummarizationSetBy = Automatic
+
+	column q22_pct
+		dataType: string
+		lineageTag: 3f3d68ba-4b30-4a7a-9f8e-bf57baf11370
+		summarizeBy: none
+		sourceColumn: q22_pct
+
+		annotation SummarizationSetBy = Automatic
+
+	column safety_car_pct
+		dataType: string
+		lineageTag: a2a7be79-f8e2-431b-a8d8-cac6892c5b6a
+		summarizeBy: none
+		sourceColumn: safety_car_pct
+
+		annotation SummarizationSetBy = Automatic
+
+	column wet_race_pct
+		dataType: string
+		lineageTag: 4b525da1-ff2b-4450-9bd7-37a292cbe64b
+		summarizeBy: none
+		sourceColumn: wet_race_pct
+
+		annotation SummarizationSetBy = Automatic
+
+	column red_flag_pct
+		dataType: string
+		lineageTag: 2660e5f6-175c-4b9b-8bd0-79fb789877a7
+		summarizeBy: none
+		sourceColumn: red_flag_pct
+
+		annotation SummarizationSetBy = Automatic
+
+	column winner_from_pole_pct
+		dataType: string
+		lineageTag: bb240906-621e-4947-a072-2c51ef9d843a
+		summarizeBy: none
+		sourceColumn: winner_from_pole_pct
+
+		annotation SummarizationSetBy = Automatic
+
+	column expected_classified
+		dataType: string
+		lineageTag: 74f9962e-0f0e-4832-bdaa-6c6d52443081
+		summarizeBy: none
+		sourceColumn: expected_classified
+
+		annotation SummarizationSetBy = Automatic
+
+	column classified_le_15_pct
+		dataType: string
+		lineageTag: c77a2abe-aba2-413b-8595-e74839313ae0
+		summarizeBy: none
+		sourceColumn: classified_le_15_pct
+
+		annotation SummarizationSetBy = Automatic
+
+	column classified_16_18_pct
+		dataType: string
+		lineageTag: 1154e65e-af4e-414d-b1a4-c23b9334f208
+		summarizeBy: none
+		sourceColumn: classified_16_18_pct
+
+		annotation SummarizationSetBy = Automatic
+
+	column classified_ge_19_pct
+		dataType: string
+		lineageTag: 3a14b062-9e14-4d33-913c-71923680613e
+		summarizeBy: none
+		sourceColumn: classified_ge_19_pct
+
+		annotation SummarizationSetBy = Automatic
+
 	partition gp_probabilidades = m
 		mode: import
 		source =
